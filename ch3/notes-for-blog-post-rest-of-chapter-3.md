@@ -29,11 +29,34 @@ Qualitative variable can sometimes be known as categorical or factor variables.
 
 #### Extensions of the Linear Model
 
+* Standard linear model provides interpretable results, and is quite useful in on many real-world problems
+* However, it makes several strict assumptions that are often not true in practice.
+* Verbatim: Two of the most important assumptions state that the relationship between the predictors and response are additive and linear.
+* Explain what the additive and liner assumptions due - will explore other methods to relax these two assumptions but here are two classical ways
+
 ##### Removing the Additive Assumption (interaction terms)
+
+*interaction* terms
+* formulas 3.31 and 3.32, and the interpretation below
+* A change in X_2 will change the impact of X_1 on Y --> the relationship between X_1 and Y is no longer linear
+* We interpret the p-value of the interaction term just like any other p-value for a coefficient
+* Here a significant p-value indicates indicates the true relationship is non-linear
+* In the event the interaction term is significant but the main effects are not, we should still include the main effects via the *hierarchy principle*
+* Verbatim from book: The hierarchical principle states that if we include an interaction in a model, we should also include the main effects, even if the p-values associated with their coefficients are not significant.
+* The concept of interaction also applies to qualitative variables, or a combination of quantitative and qualitative variables
+* Interaction between a quantitative and qualitative variable has a nice interpretation --> instead of two parallel hyperplanes, we get two hyperplanes with different slopes --> make sure this is accurate for "hyperplanes" 
 
 ##### Non-linear Relationships
 
-#### Potential Problems
+* Here, a simple way to extend the linear model to accommodate non-linear relationships is explored --> polynomial regression.  In future posts, I'll explore more sophisticated approaches "for performing non-linear fits in more general settings".
+* Verbatim: A simple approach for incorporating non-linear associations in a linear model is to include transformed versions of the predictors in the model.
+* Write formula 3.36 in general terms
+* Comment: This is still a linear model --> it is just a multiple linear regression model where X_2 = X_1^2
+
+** >>> Going to write up the above, and make include the below, or just might publish the in 2 posts <<< **
+
+
+#### Potential Problems     <-- maybe new blog post here
 
 ##### Non-linearity of the Data
 
