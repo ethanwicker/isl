@@ -27,8 +27,34 @@ This structure of this post was influenced by the third chapter of *An Introduct
 
 #### Qualitative Predictors
 
-Depending on the context, qualitative predictors are sometimes referred to as categorical or factors variables.  The most common methods of implementing these predictors in a linear model is via *indicator* or *dummy variables*.  Below, I'll introduce this topic in the context of qualitative predictors with only two levels, and then extend the concept to qualitative predictors with multiple levels.
+Depending on the context, qualitative predictors are sometimes referred to as categorical or factors variables.  The most common methods of implementing these predictors in a linear model is via *indicator* or *dummy variables*.  Below, I'll introduce this topic in the context of qualitative predictors with only two levels, where a *level* refers to a unique value the qualitative variable can take.  I'll then extend the concept to qualitative predictors with multiple levels.
 
-##### Qualitative Predictors Predicting with Only Two Levels
+##### Qualitative Predictors with Two Levels
+
+In the case where we have a predictor variable with two possible levels, it is straightforward to create a dummy variable that takes on two possible numerical values, 0 and 1:
+
+$$
+\begin{aligned} 
+x_i = 
+    \begin{cases}
+        1 & \text{if $ith$ observation is the first level}\\
+        0 & \text{if $ith$ observation is the second level}
+    \end{cases} 
+\end{aligned}
+$$.
+
+We then use this dummy variable in the standard multiple linear regression model:
+
+$$
+\begin{aligned} 
+Y = \beta_0 + \beta_1X_1 + \beta_2X_i + \epsilon_i = 
+    \begin{cases}
+        \beta_0 + \beta_1X_1 + \beta_2 + \epsilon_i & \text{if $ith$ observation is the first level}\\
+        \beta_0 + \beta_1X_1 + \epsilon_i & \text{if $ith$ observation is the second level}
+    \end{cases}
+\end{aligned}
+$$
+
+(Start here, with 3rd bullet in my notes)
 
 ##### Qualitative Predictors with More than Two Levels
