@@ -2,7 +2,7 @@
 # Maybe sample my data down to 10,000 rows to make it easier for plotting
 #
 # Want to include:
-# * Qualitative predictors & dummy encoding of some sort
+# * Qualitative predictors & dummy encoding of some sort   --> include an example of how to do the dummy encoding myself, even with a different dataset
 # * Removing the additive assumption: interaction terms
 # * Removing the linear assumption: non-linear relationships
 
@@ -20,7 +20,7 @@
 # 6. Collinearity.            <<-- VIF
 
 # Maybe also filter out any hours with low flights traffic
-import pandas as pd
+
 
 # Plan:
 # Read in data
@@ -34,85 +34,109 @@ import pandas as pd
 
 # Might be in my benefit to really just do in scikit-learn, although will proabably want to check the interaction term logic via statsmodels and INFERENCE!
 
+# Need to do some visualizations
+# Good resouce for plotting: https://robert-alvarez.github.io/2018-06-04-diagnostic_plots/
 
-# Reading nyc data
-nyc = pd.read_csv("~/python/isl/data/nyc.csv")
-
-# Getting count of flights by carriers
-nyc.groupby("carrier_name").agg(count_flights=('timestamp_hour', 'count')).sort_values(by="count_flights", ascending=False)
-
-# Filter for carriers that have at least 10,000 flights in dataset
-nyc_high_vol_carriers = \
-    nyc\
-    .groupby("carrier_name")\
-    .filter(lambda x: x["carrier_name"].count() >= 10000)
-
-nyc_per_hour_per_carrier = \
-    nyc_high_vol_carriers \
-    .groupby(["timestamp_hour", "carrier_name"]) \
-    .agg(mean_departure_delay=('departure_delay', 'mean'),
-         mean_wind_speed_mph=('wind_speed_mph', 'mean'),
-         mean_precipitation_inches=('precipitation_inches', 'mean'),
-         mean_visibility_miles=('visibility_miles', 'mean')) \
-    .reset_index()
-
-nyc_per_hour_per_orig_airport = \
-    nyc_high_vol_carriers \
-    .groupby(["timestamp_hour", "orig_airport"]) \
-    .agg(mean_departure_delay=('departure_delay', 'mean'),
-         mean_wind_speed_mph=('wind_speed_mph', 'mean'),
-         mean_precipitation_inches=('precipitation_inches', 'mean'),
-         mean_visibility_miles=('visibility_miles', 'mean')) \
-    .reset_index()
-
-# Using nyc_per_hour_per_orig_airport
-# Can I predict mean departure delay as a function of weather and which airport
-# Then use an interaction term on precipitation inches and the airports
-
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-
-model = smf.ols(formula="mean_departure_delay ~ mean_wind_speed_mph + mean_precipitation_inches + mean_visibility_miles + orig_airport", data=nyc_per_hour_per_orig_airport)
-result = model.fit()
-result.summary()
-
-# Explain what the : vs * is in the formula
-
-model = smf.ols(formula="mean_departure_delay ~ mean_precipitation_inches + orig_airport", data=nyc_per_hour_per_orig_airport)
-model = smf.ols(formula="mean_departure_delay ~ mean_precipitation_inches*carrier_name", data=nyc_per_hour_per_carrier)
-result = model.fit()
-result.summary()
-
-
-
-
-
-## Working on boston data below, easier to work with
-
-
-
-
-
+import pandas as pd
 from sklearn import datasets
 from sklearn import linear_model
+from sklearn.preprocessing import PolynomialFeatures
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
+from yellowbrick.regressor import ResidualsPlot
 
 
+# Load data
 boston = datasets.load_boston()
 
+# Printing description
+print(boston.DESCR)
+
+# Creating DataFrame instead of X and y numpy.ndarrays for ease of use with patsy
 X_df = pd.DataFrame(boston.data, columns=boston.feature_names)
 y_df = pd.DataFrame(boston.target, columns=["MEDV"])
-
 boston_df = pd.concat([X_df, y_df], axis=1)
 
-#sklearn.linear_model
-model = linear_model.LinearRegression()
-model.fit(X=boston_df[["CHAS", "RM"]], y=boston_df["MEDV"])
-model.score(X, y)
+# Using smf.ols first for ease of exploration + inference
+# Going to train on MEDV as a function of ZN, CHAS, RM, DIS
+# We learn that DIS is not significant, so we should drop it
+model = smf.ols(formula="MEDV ~ ZN + CHAS + RM + DIS", data=boston_df)
+result = model.fit()
+result.summary()
 
-test = boston_df[["CHAS", "RM"]]
+# Adding interaction term
+# R^2 is 0.537
+# Discuss : vs. * here
+# All terms with CHAS no longer significant, so dropping
+model = smf.ols(formula="MEDV ~ ZN + CHAS + RM + ZN:CHAS + CHAS:RM + ZN:RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+result = model.fit()
+result.summary()
+
+# R^2 = 0.522
+model = smf.ols(formula="MEDV ~ ZN + RM + ZN:RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+result = model.fit()
+result.summary()
+
+# Removing interaction term for comparison
+# R^2 drops to 0.504
+model = smf.ols(formula="MEDV ~ ZN + RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+result = model.fit()
+result.summary()
+
+# Using sm.OLS
+# Manually creating X with interaction term
+# Adding constant to X
+# Produces same model as smf.ols
+X = boston_df[["ZN", "RM"]].assign(ZN_RM=boston_df["ZN"] * boston_df["RM"])
+X = sm.add_constant(X)
+model = sm.OLS(endog=boston_df["MEDV"], exog=X)
+result = model.fit()
+result.summary()
+
+# Using sklearn.linear_model
+model = linear_model.LinearRegression()
+model.fit(X=X, y=boston_df["MEDV"])
+model.score(X=X, y=boston_df["MEDV"])    # Same R^2 value as above
+
+# How to do with sklearn and the polynomial regression stuff
+# Exploring
+poly = PolynomialFeatures(interaction_only=True)
+X_poly = poly.fit_transform(X=boston_df[["ZN", "RM"]])   # include_bias=True is the default here
+model = linear_model.LinearRegression()
+model.fit(X=X_poly, y=boston_df["MEDV"])
+model.score(X=X_poly, y=boston_df["MEDV"])    # Same R^2 value as above
+
+model.show()  # trying to make residual plot with yellowbrick -> not working
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 sm.add_constant(test)
+
+model = smf.ols(formula="MEDV ~ ZN + RM + DIS + ZN:RM + RM:DIS + ZN:DIS", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+model = smf.ols(formula="MEDV ~ ZN + RM + DIS", data=boston_df)  # start with this one
+result = model.fit()
+result.summary()
 
 #sm.OLS
 # will need to add intercept
@@ -120,22 +144,7 @@ model = sm.OLS(endog=boston_df["MEDV"], exog=sm.add_constant(boston_df[["CHAS", 
 result = model.fit()
 result.summary()
 
-#smf.ols
-model = smf.ols(formula="MEDV ~ CHAS + RM", data=boston_df)
-result = model.fit()
-result.summary()
 
-#smf.ols with interaction
-model = smf.ols(formula="MEDV ~ CHAS + RM + CHAS:RM", data=boston_df)
-# model = smf.ols(formula="MEDV ~ CHAS*RM", data=boston_df)  # equivalent
-result = model.fit()
-result.summary()
-
-# Trying to find a good interaction term
-model = smf.ols(formula="MEDV ~ CHAS + RM + ZN + DIS + CHAS:DIS + ZN:DIS", data=boston_df)    ## <<-- works
-# model = smf.ols(formula="MEDV ~ CHAS*RM", data=boston_df)  # equivalent
-result = model.fit()
-result.summary()
 
 
 
