@@ -37,6 +37,7 @@
 # Need to do some visualizations
 # Good resouce for plotting: https://robert-alvarez.github.io/2018-06-04-diagnostic_plots/
 
+import numpy as np
 import pandas as pd
 from sklearn import datasets
 from sklearn import linear_model
@@ -68,18 +69,18 @@ result.summary()
 # R^2 is 0.537
 # Discuss : vs. * here
 # All terms with CHAS no longer significant, so dropping
-model = smf.ols(formula="MEDV ~ ZN + CHAS + RM + ZN:CHAS + CHAS:RM + ZN:RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+model = smf.ols(formula="MEDV ~ ZN + CHAS + RM + ZN:CHAS + CHAS:RM + ZN:RM", data=boston_df)
 result = model.fit()
 result.summary()
 
 # R^2 = 0.522
-model = smf.ols(formula="MEDV ~ ZN + RM + ZN:RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+model = smf.ols(formula="MEDV ~ ZN + RM + ZN:RM", data=boston_df)
 result = model.fit()
 result.summary()
 
 # Removing interaction term for comparison
 # R^2 drops to 0.504
-model = smf.ols(formula="MEDV ~ ZN + RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+model = smf.ols(formula="MEDV ~ ZN + RM", data=boston_df)
 result = model.fit()
 result.summary()
 
@@ -106,13 +107,107 @@ model = linear_model.LinearRegression()
 model.fit(X=X_poly, y=boston_df["MEDV"])
 model.score(X=X_poly, y=boston_df["MEDV"])    # Same R^2 value as above
 
-model.show()  # trying to make residual plot with yellowbrick -> not working
+# Residual plot shows a slight non-linearity, yellowbrick
+model2 = ResidualsPlot(linear_model.LinearRegression())
+model2.fit(X=X_poly, y=boston_df["MEDV"])
+model2.show()
+
+# Let's try some polynomial regressions in the model see if can get residual plot to improve
+# Using smf.ols
+# I() sometimes called the identifiy or indicator or "as-is" function
+model = smf.ols(formula="MEDV ~ ZN + RM + I(ZN**2) + I(RM**2) + ZN:RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+result = model.fit()
+result.summary()
+
+# Trying polynomial regression again with np.power()
+# Only trying up to degreee 2
+# Exact same result as about with indicator function
+model = smf.ols(formula="MEDV ~ ZN + RM + np.power(ZN, 2) + np.power(RM, 2) + ZN:RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+result = model.fit()
+result.summary()
+
+# np.power(ZN, 2) not significant, so let's drop it
+# Also neither is ZN, but keeping it cause hierarchy principle
+# Actually they're all significant at the 0.05 level
+model = smf.ols(formula="MEDV ~ ZN + RM + np.power(RM, 2) + ZN:RM", data=boston_df)
+result = model.fit()
+result.summary()
+
+# Basically doing "Mixed Selection" here, with a sig level of 0.01
+model = smf.ols(formula="MEDV ~ RM + np.power(RM, 2)", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+result = model.fit()
+result.summary()
+
+# Let's use scikit-learn to get the same result, for practice
+# Then yellow brick again
+# Couldn't find any simple way to perform the polynomial regression on just the subset of predictors
+# after taking out the ZN variable, leaving it like this for now
+poly = PolynomialFeatures()
+X_poly = poly.fit_transform(X=boston_df[["ZN", "RM"]])   # include_bias=True is the default here
+model = linear_model.LinearRegression()
+model.fit(X=X_poly, y=boston_df["MEDV"])
+model.score(X=X_poly, y=boston_df["MEDV"])
+
+model.predict(X=X_poly)
+
+# Let's do the residual plot again on this module
+# Similar pattern
+model2 = ResidualsPlot(linear_model.LinearRegression())
+X_poly = poly.fit_transform(X=boston_df[["ZN", "RM"]])
+model2.fit(X=X_poly, y=boston_df["MEDV"])
+model2.show()
 
 
 
+## Trying 3D scatter
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from mpl_toolkits.mplot3d import Axes3D
+
+df = pd.read_csv('2016.csv')
+sns.set(style = "darkgrid")
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection = '3d')
+
+x = boston_df["ZN"]
+y = boston_df["RM"]
+z = boston_df["MEDV"]
+
+ax.set_xlabel("ZN")
+ax.set_ylabel("RM")
+ax.set_zlabel("MEDV")
+
+ax.scatter(x, y, z)
+ax.scatter(x, y, model.predict(X=X_poly))
+
+# need to add this
+# create a wiremesh for the plane that the predicted values will lie
+xx, yy, zz = np.meshgrid(X[:, 0], X[:, 1], X[:, 2])
+combinedArrays = np.vstack((xx.flatten(), yy.flatten(), zz.flatten())).T
+Z = combinedArrays.dot(a)
+# and this
+ax.plot_trisurf(combinedArrays[:, 0], combinedArrays[:, 1], Z, alpha=0.5)
+# Finish with tihs and see if it works
+# but the will try plot_ly
+
+ax.legend()
+
+
+#
+# ax.plot_surface(x, y,
+#                 model.predict(X=X_poly).reshape(),
+#                 rstride=1,
+#                 cstride=1,
+#                 color='None',
+#                 alpha = 0.4)
+
+plt.show()
 
 
 
+np.reshape(model.predict(X=X_poly))
 
 
 
