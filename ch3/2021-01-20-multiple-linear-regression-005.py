@@ -184,7 +184,7 @@ ax.scatter(x, y, model.predict(X=X_poly))
 
 # need to add this
 # create a wiremesh for the plane that the predicted values will lie
-xx, yy, zz = np.meshgrid(X[:, 0], X[:, 1], X[:, 2])
+xx, yy, zz = np.meshgrid(x, y, z)
 combinedArrays = np.vstack((xx.flatten(), yy.flatten(), zz.flatten())).T
 Z = combinedArrays.dot(a)
 # and this
@@ -213,7 +213,62 @@ np.reshape(model.predict(X=X_poly))
 
 
 
+## THIS MIGHT HAVE ACTUALY WORKED
 
+# Trying out plotly
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn.svm import SVR
+
+mesh_size = .02
+margin = 0
+
+
+df = px.data.iris()
+
+X = df[['sepal_width', 'sepal_length']]
+y = df['petal_width']
+
+X_poly = poly.fit_transform(X=boston_df[["ZN", "RM"]])
+X = X_poly
+y = boston_df["MEDV"]
+
+# Condition the model on sepal width and length, predict the petal width
+model = SVR(C=1.)
+model.fit(X, y)
+
+poly = PolynomialFeatures()
+X_poly = poly.fit_transform(X=boston_df[["ZN", "RM"]])   # include_bias=True is the default here
+model = linear_model.LinearRegression()
+model.fit(X=X_poly, y=boston_df["MEDV"])
+model.score(X=X_poly, y=boston_df["MEDV"])
+
+# Create a mesh grid on which we will run our model
+x_min, x_max = boston_df.ZN.min() - margin, boston_df.ZN.max() + margin
+y_min, y_max = boston_df.RM.min() - margin, boston_df.RM.max() + margin
+xrange = np.arange(x_min, x_max, mesh_size)
+yrange = np.arange(y_min, y_max, mesh_size)
+xx, yy = np.meshgrid(xrange, yrange)
+
+# Create a mesh grid on which we will run our model
+x_min, x_max = X.sepal_width.min() - margin, X.sepal_width.max() + margin
+y_min, y_max = X.sepal_length.min() - margin, X.sepal_length.max() + margin
+xrange = np.arange(x_min, x_max, mesh_size)
+yrange = np.arange(y_min, y_max, mesh_size)
+xx, yy = np.meshgrid(xrange, yrange)
+
+# Run model
+pred = model.predict(np.c_[xx.ravel(), yy.ravel()])
+pred = model.predict(np.c_[xx.ravel(), xx.ravel()**2, yy.ravel(), yy.ravel()**2, xx.ravel()*yy.ravel(), xx.ravel()*yy.ravel()**2])
+pred = model.predict(X_poly)
+pred = pred.reshape(xx.shape)
+
+# Generate the plot
+fig = px.scatter_3d(boston_df, x='ZN', y='RM', z='MEDV')
+fig.update_traces(marker=dict(size=5))
+fig.add_traces(go.Surface(x=xrange, y=yrange, z=pred, name='pred_surface'))
+fig.show()
 
 
 
