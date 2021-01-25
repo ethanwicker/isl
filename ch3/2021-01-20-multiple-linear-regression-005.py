@@ -19,7 +19,6 @@
 # 5. High-leverage points.    <<-- leverage statistics
 # 6. Collinearity.            <<-- VIF
 
-# Maybe also filter out any hours with low flights traffic
 
 
 # Plan:
@@ -32,7 +31,6 @@
 # Discuss removing the additive assumption --> interaction terms
 # Discuss removing the linear assumption --> polynomial regression
 
-# Might be in my benefit to really just do in scikit-learn, although will proabably want to check the interaction term logic via statsmodels and INFERENCE!
 
 # Need to do some visualizations
 # Good resouce for plotting: https://robert-alvarez.github.io/2018-06-04-diagnostic_plots/
@@ -57,6 +55,85 @@ print(boston.DESCR)
 X_df = pd.DataFrame(boston.data, columns=boston.feature_names)
 y_df = pd.DataFrame(boston.target, columns=["MEDV"])
 boston_df = pd.concat([X_df, y_df], axis=1)
+
+# Doing one-hot encoding
+from sklearn.preprocessing import OneHotEncoder
+enc = OneHotEncoder()
+
+pd.cut(boston_df["CRIM"], bins=3, labels=["low_crime", "medium_crime", "high_crime"])
+boston_df = \
+    (boston_df
+     .assign(crime_label=pd.cut(boston_df["CRIM"],
+                               bins=3,
+                               labels=["low_crime", "medium_crime", "high_crime"])))
+
+enc = OneHotEncoder()
+#enc.fit(boston_df["crime_label"])
+X_for_enc = boston_df["crime_label"].to_numpy().reshape(-1, 1)
+test = enc.fit_transform(X_for_enc)
+test.toarray()
+
+## Could also use pd.get_dummies -> comment on this, but can't use in a scikit-learn pipeline
+
+pd.DataFrame(data=test.toarray(), columns=enc.categories_)
+test.categories_
+#enc.fit(X_for_enc)
+enc.categories_
+test = enc.transform(X_for_enc)
+enc.get_feature_names()
+
+test = enc.fit_transform(X_for_enc)
+test.toarray()
+test.get_feature_names()
+
+## Example
+oe_style = OneHotEncoder()
+oe_results = oe_style.fit_transform(obj_df[["body_style"]])
+pd.DataFrame(oe_results.toarray(), columns=oe_style.categories_).head()
+##
+
+
+enc.get_features_names()
+
+pd.DataFrame(test)
+
+enc = OneHotEncoder(handle_unknown='ignore')
+X = [['Male', 1], ['Female', 3], ['Female', 2]]
+enc.fit(X)
+
+
+
+enc.categories_
+
+enc.transform([['Female', 1], ['Male', 4]]).toarray()
+
+
+enc.inverse_transform([[0, 1, 1, 0, 0], [0, 0, 0, 1, 0]])
+
+
+enc.get_feature_names(['gender', 'group'])
+
+
+
+boston_df.groupby("crime_label").count()
+
+test
+boston_df
+
+enc.categories_
+
+enc.categories_
+
+enc.transform([['Female', 1], ['Male', 4]]).toarray()
+
+
+enc.inverse_transform([[0, 1, 1, 0, 0], [0, 0, 0, 1, 0]])
+
+
+enc.get_feature_names(['gender', 'group'])
+
+
+
 
 # Using smf.ols first for ease of exploration + inference
 # Going to train on MEDV as a function of ZN, CHAS, RM, DIS
@@ -225,24 +302,53 @@ mesh_size = .02
 margin = 0
 
 
-df = px.data.iris()
-
-X = df[['sepal_width', 'sepal_length']]
-y = df['petal_width']
+# df = px.data.iris()
+#
+# X = df[['sepal_width', 'sepal_length']]
+# y = df['petal_width']
 
 X_poly = poly.fit_transform(X=boston_df[["ZN", "RM"]])
 X = X_poly
 y = boston_df["MEDV"]
 
 # Condition the model on sepal width and length, predict the petal width
-model = SVR(C=1.)
-model.fit(X, y)
+# model = SVR(C=1.)
+# model.fit(X, y)
 
 poly = PolynomialFeatures()
 X_poly = poly.fit_transform(X=boston_df[["ZN", "RM"]])   # include_bias=True is the default here
 model = linear_model.LinearRegression()
 model.fit(X=X_poly, y=boston_df["MEDV"])
 model.score(X=X_poly, y=boston_df["MEDV"])
+
+# Trying different model
+model = smf.ols(formula="MEDV ~ ZN + RM + I(ZN**2) + I(RM**2) + ZN:RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
+result = model.fit()
+result.summary()
+
+exog = pd.DataFrame(columns=dict(ZN=boston_df["ZN"], ZN_squared=boston_df["ZN"]**2))
+exog = np.array([[boston_df["ZN"],
+                 [boston_df["ZN"]**2],
+                 [boston_df["RM"]],
+                 [boston_df["RM"]**2],
+                 np.multiply([boston_df["ZN"]], [boston_df["ZN"]])]))
+
+np.array([[1, 2, 3],
+          [4, 5, 6],
+          [7, 8, 9]])
+array=np.array([boston_df["ZN"],
+         boston_df["ZN"]**2,
+         boston_df["RM"]]).T
+
+exog = pd.DataFrame(data=array, columns=["a", "b", "c"])
+exog = sm.add_constant(exog)
+
+model = sm.OLS(endog=y,exog=exog)  # then this one, and the next one take out the terms that aren't significant
+result = model.fit()
+result.summary()
+# no constant here - being fooled, but just added in the constant
+
+model.predict(params=result.params)
 
 # Create a mesh grid on which we will run our model
 x_min, x_max = boston_df.ZN.min() - margin, boston_df.ZN.max() + margin
@@ -252,17 +358,21 @@ yrange = np.arange(y_min, y_max, mesh_size)
 xx, yy = np.meshgrid(xrange, yrange)
 
 # Create a mesh grid on which we will run our model
-x_min, x_max = X.sepal_width.min() - margin, X.sepal_width.max() + margin
-y_min, y_max = X.sepal_length.min() - margin, X.sepal_length.max() + margin
-xrange = np.arange(x_min, x_max, mesh_size)
-yrange = np.arange(y_min, y_max, mesh_size)
-xx, yy = np.meshgrid(xrange, yrange)
+# x_min, x_max = X.sepal_width.min() - margin, X.sepal_width.max() + margin
+# y_min, y_max = X.sepal_length.min() - margin, X.sepal_length.max() + margin
+# xrange = np.arange(x_min, x_max, mesh_size)
+# yrange = np.arange(y_min, y_max, mesh_size)
+# xx, yy = np.meshgrid(xrange, yrange)
 
 # Run model
+# The model is just crappy - it's performing poorly at the higher ends
 pred = model.predict(np.c_[xx.ravel(), yy.ravel()])
-pred = model.predict(np.c_[xx.ravel(), xx.ravel()**2, yy.ravel(), yy.ravel()**2, xx.ravel()*yy.ravel(), xx.ravel()*yy.ravel()**2])
-pred = model.predict(X_poly)
-pred = pred.reshape(xx.shape)
+pred = model.predict(np.c_[xx.ravel(), xx.ravel()**2, yy.ravel()])  # do this
+pred = model.predict(exog=np.c_[xx.ravel(), xx.ravel()**2, yy.ravel(), yy.ravel()**2, xx.ravel()*yy.ravel()])  # don't think this works
+pred = model.predict(params=result.params, exog=np.c_[np.ones(shape=xx.ravel().shape), xx.ravel(), xx.ravel()**2, yy.ravel()])  # this also works for ZN + ZN^2 + RM example
+## This is exactly what I want with the one's included in the constant
+pred = model.predict(params=result.params, exog=np.c_[np.ones(shape=xx.ravel().shape), xx.ravel(), xx.ravel()**2, yy.ravel()])  # this also works for ZN + ZN^2 + RM example
+pred = pred.reshape(xx.shape) # and this
 
 # Generate the plot
 fig = px.scatter_3d(boston_df, x='ZN', y='RM', z='MEDV')
@@ -270,6 +380,15 @@ fig.update_traces(marker=dict(size=5))
 fig.add_traces(go.Surface(x=xrange, y=yrange, z=pred, name='pred_surface'))
 fig.show()
 
+# fig = px.scatter_3d(boston_df, x='ZN', y='RM', z='MEDV')
+# fig.update_traces(marker=dict(size=5))
+# fig.add_traces(go.Surface(x=xrange, y=yrange, z=pred, name='pred_surface'))
+# fig.show()
+
+# fig = px.scatter_3d(df, x='sepal_width', y='sepal_length', z='petal_width')
+# fig.update_traces(marker=dict(size=5))
+# fig.add_traces(go.Surface(x=xrange, y=yrange, z=pred, name='pred_surface'))
+# fig.show()
 
 
 
@@ -277,7 +396,10 @@ fig.show()
 
 
 
-
+boston_df.info()
+boston_df.info(verbose=True)
+boston_df.describe(include='all')
+boston_df.loc[:, ["ZN", "RM", "MEDV"]].describe()
 
 
 

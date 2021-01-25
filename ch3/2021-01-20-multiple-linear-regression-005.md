@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Multiple Linear Regression #5"
-subtitle: Update this
+subtitle: Update this (Using scikit-learn, statsmodels)
 comments: false
 ---
 
@@ -91,11 +91,13 @@ boston_df = pd.concat([X_df, y_df], axis=1)
 
 ### Qualitative Predictors & Dummy Encoding
 
-Most of the predictors in the Boston housing dataset are quantitative.  The `CHAS` variable however, indicating if the census tract is bounded by the Charles River or not is qualitative and has already been encoded as 0 or 1.
+Most of the predictors in the Boston housing dataset are quantitative.  The `CHAS` variable however, indicating if the census tract is bounded by the Charles River or not is qualitative and has been pre-encoded as 0 or 1.
+
+use the first feature to drop the first feature
 
 * For demonstration, going to do the encoding myself using scikit-learn I think preprossing
 * won't actually use this variable, but just wanted to explore this functionality of scikit-learn.
-
+* START HERE
 
 ### Removing the Additive Assumption: Interaction Terms
 
