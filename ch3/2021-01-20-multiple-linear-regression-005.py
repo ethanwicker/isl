@@ -39,10 +39,11 @@ import numpy as np
 import pandas as pd
 from sklearn import datasets
 from sklearn import linear_model
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import PolynomialFeatures
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-from yellowbrick.regressor import ResidualsPlot
+from yellowbrick.regressor import ResidualsPlot   # don't use can delete
 
 
 # Load data
@@ -56,83 +57,34 @@ X_df = pd.DataFrame(boston.data, columns=boston.feature_names)
 y_df = pd.DataFrame(boston.target, columns=["MEDV"])
 boston_df = pd.concat([X_df, y_df], axis=1)
 
-# Doing one-hot encoding
-from sklearn.preprocessing import OneHotEncoder
-enc = OneHotEncoder()
-
-pd.cut(boston_df["CRIM"], bins=3, labels=["low_crime", "medium_crime", "high_crime"])
+# Creating crime_label field
 boston_df = \
     (boston_df
-     .assign(crime_label=pd.cut(boston_df["CRIM"],
-                               bins=3,
-                               labels=["low_crime", "medium_crime", "high_crime"])))
+     .assign(
+        crime_label=pd.cut(boston_df["CRIM"],
+                           bins=3,
+                           labels=["low_crime", "medium_crime", "high_crime"]))
+    )
 
-enc = OneHotEncoder()
-#enc.fit(boston_df["crime_label"])
-X_for_enc = boston_df["crime_label"].to_numpy().reshape(-1, 1)
-test = enc.fit_transform(X_for_enc)
-test.toarray()
+# Converting crime_label field to NumPy array
+crime_labels_ndarray = boston_df["crime_label"].to_numpy().reshape(-1, 1)
 
-## Could also use pd.get_dummies -> comment on this, but can't use in a scikit-learn pipeline
+# Defining encoder
+encoder = OneHotEncoder()
 
-pd.DataFrame(data=test.toarray(), columns=enc.categories_)
-test.categories_
-#enc.fit(X_for_enc)
-enc.categories_
-test = enc.transform(X_for_enc)
-enc.get_feature_names()
+# Fitting encoder on array, and transforming
+crime_labels_encoded = encoder.fit_transform(crime_labels_ndarray)
 
-test = enc.fit_transform(X_for_enc)
-test.toarray()
-test.get_feature_names()
+# Converting encoded array to DataFrame
+crime_labels_df = pd.DataFrame(data=crime_labels_encoded.toarray(),
+                               columns=encoder.get_feature_names())
 
-## Example
-oe_style = OneHotEncoder()
-oe_results = oe_style.fit_transform(obj_df[["body_style"]])
-pd.DataFrame(oe_results.toarray(), columns=oe_style.categories_).head()
-##
+# Concatenating with boston_df
+boston_df = pd.concat(objs=[boston_df, crime_labels_df], axis=1)
 
-
-enc.get_features_names()
-
-pd.DataFrame(test)
-
-enc = OneHotEncoder(handle_unknown='ignore')
-X = [['Male', 1], ['Female', 3], ['Female', 2]]
-enc.fit(X)
-
-
-
-enc.categories_
-
-enc.transform([['Female', 1], ['Male', 4]]).toarray()
-
-
-enc.inverse_transform([[0, 1, 1, 0, 0], [0, 0, 0, 1, 0]])
-
-
-enc.get_feature_names(['gender', 'group'])
-
-
-
-boston_df.groupby("crime_label").count()
-
-test
-boston_df
-
-enc.categories_
-
-enc.categories_
-
-enc.transform([['Female', 1], ['Male', 4]]).toarray()
-
-
-enc.inverse_transform([[0, 1, 1, 0, 0], [0, 0, 0, 1, 0]])
-
-
-enc.get_feature_names(['gender', 'group'])
-
-
+# Could also use this to drop the first column
+# Necessary when fitting unregularized linear models, so as to not create linear dependencies
+encoder = OneHotEncoder(drop="first")
 
 
 # Using smf.ols first for ease of exploration + inference
@@ -141,6 +93,16 @@ enc.get_feature_names(['gender', 'group'])
 model = smf.ols(formula="MEDV ~ ZN + CHAS + RM + DIS", data=boston_df)
 result = model.fit()
 result.summary()
+
+# For post
+model = smf.ols(formula="MEDV ~ ZN + CHAS + RM", data=boston_df)
+result = model.fit()
+result.summary()
+
+# Looking at residual plot of above model
+import seaborn as sns
+sns.residplot(x=boston_df[["ZN", "CHAS", "RM"]], y=boston_df["MEDV"])    # doesn't work
+## START HERE
 
 # Adding interaction term
 # R^2 is 0.537
