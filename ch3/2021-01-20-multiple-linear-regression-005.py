@@ -38,6 +38,7 @@
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn import datasets
 from sklearn import linear_model
 from sklearn.preprocessing import OneHotEncoder
@@ -107,6 +108,17 @@ resid = y - y_hat
 
 sns.scatterplot(x=y_hat, y=resid).set(xlabel="Predicted Value",
                                       ylabel="Residual")
+
+# Creating plot of residuals vs predictors to diagnosis any error term correlation
+
+sns.regplot(x='value', y='wage', data=df_melt, ax=axs[0])
+sns.regplot(x='value', y='wage', data=df_melt, ax=axs[1])
+
+fig, axs = plt.subplots(nrows=2)
+sns.scatterplot(x=boston_df["ZN"], y=resid, ax=axs[0]).set(ylabel="Residual")
+sns.scatterplot(x=boston_df["RM"], y=resid, ax=axs[1]).set(ylabel="Residual")
+
+
 
 # Adding interaction term
 # R^2 is 0.537
@@ -191,7 +203,13 @@ model = linear_model.LinearRegression()
 model.fit(X=X_poly, y=boston_df["MEDV"])
 model.score(X=X_poly, y=boston_df["MEDV"])
 
-model.predict(X=X_poly)
+y = boston_df["MEDV"]
+y_hat = model.predict(X=X_poly)
+resid = y - y_hat
+
+sns.scatterplot(x=y_hat, y=resid).set(xlabel="Predicted Value",
+                                      ylabel="Residual")
+
 
 # Let's do the residual plot again on this module
 # Similar pattern
