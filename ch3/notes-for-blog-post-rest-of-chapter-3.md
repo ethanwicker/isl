@@ -1,3 +1,18 @@
+
+**Notes below**
+
+### Big header
+
+#### Small header
+
+$$
+\begin{aligned} 
+Y = \beta_0 + \beta_1X_1 + \beta_2X_2 + ... + \beta_pX_p + \epsilon 
+\end{aligned}
+$$
+
+**Notes above**``
+
 * Planning to do a theoretical post (or two) and a Python example post (or two)
 * Comment the structure of this post was influence by ISL chapter 2
 
@@ -10,7 +25,7 @@
 
 Qualitative variable can sometimes be known as categorical or factor variables.
 
-##### Predicting with Only Two Levels
+##### Qualitative Predictors Predicting with Only Two Levels
 
 * When we only have two levels, it is simple to create an *indicator* or *dummy variable* that takes on two possible numeric values, 0 or 1
 * See formulas 3.26 and 3.27, and the interpretation about beta_0, beta_1 immediately following.
@@ -22,10 +37,11 @@ Qualitative variable can sometimes be known as categorical or factor variables.
 
 * Verbatim from book: "When a qualitative predictor has more than two levels, a single dummy variable cannot represent all possible values. In this situation, we can create additional dummy variables."
 * See formulas 3.28, 3.29 and 3.30 and the below interpretation
-* Verbatim from book: There will always be one fewer dummy vari- able than the number of levels. The level with no dummy variable—African American in this example—is known as the baseline.
+* Verbatim from book: There will always be one fewer dummy variable than the number of levels. The level with no dummy variable—African American in this example—is known as the baseline.
 * Interpretation of p-values is the same.  However, we can use the F-test to test H0 : β1 = β2 = 0, which does not depend on the coding.
 * With the dummy variable approach, we can also incorporate both quantitative and qualitative predictors.  We simply fit a multiple regression model on the quantitative variables and the encoded qualitative variables.  Graphically, this is represented as two hyperplanes parallel to each other.
 * Note, there are other methods of coding qualitative variables, beside the dummy variable approach here, but they all produce equivalent model fits.
+* Related concept is 1-hot encoding 
 
 #### Extensions of the Linear Model
 
@@ -44,7 +60,7 @@ Qualitative variable can sometimes be known as categorical or factor variables.
 * In the event the interaction term is significant but the main effects are not, we should still include the main effects via the *hierarchy principle*
 * Verbatim from book: The hierarchical principle states that if we include an interaction in a model, we should also include the main effects, even if the p-values associated with their coefficients are not significant.
 * The concept of interaction also applies to qualitative variables, or a combination of quantitative and qualitative variables
-* Interaction between a quantitative and qualitative variable has a nice interpretation --> instead of two parallel hyperplanes, we get two hyperplanes with different slopes --> make sure this is accurate for "hyperplanes" 
+* Interaction between a quantitative and qualitative variable has a nice interpretation --> instead of two ``parallel hyperplanes, we get two intersecting hyperplanes.
 
 ##### Non-linear Relationships
 
@@ -58,6 +74,16 @@ Qualitative variable can sometimes be known as categorical or factor variables.
 
 #### Potential Problems     <-- maybe new blog post here
 
+* When fitting a linear regression model to a particular dataset, many problems can occur.  
+* Below, I'll briefly discuss some of the most common issues:
+  (Put below in italics)
+1. Non-linearity of the response-predictor relationships. 
+2. Correlation of error terms.
+3. Non-constant variance of error terms.
+4. Outliers.
+5. High-leverage points.
+6. Collinearity.
+
 ##### Non-linearity of the Data
 
 ##### Correlation of Error Terms
@@ -69,3 +95,23 @@ Qualitative variable can sometimes be known as categorical or factor variables.
 ##### High Leverage Points
 
 ##### Collinearity
+
+
+#### Notes for post 5 and 6
+Post 5: Python example
+Maybe sample my data down to 10,000 rows to make it easier for plotting
+
+Want to include: 
+* Qualitiative predictors & dummy encoding of some sort
+* Removing the additive assumption: interaction terms
+* Removing the linear assumption: non-linear relationships
+
+* A comparison of scikit-learn vs. statsmodels
+
+* Discuss these 6 problems (maybe not all, but some)
+1. Non-linearity of the response-predictor relationships.  <<-- residual plot
+2. Correlation of error terms.
+3. Non-constant variance of error terms.
+4. Outliers.                <<-- maybe studentized residuals
+5. High-leverage points.    <<-- leverage statistics 
+6. Collinearity.            <<-- VIF

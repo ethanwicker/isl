@@ -33,10 +33,11 @@
 
 
 # Need to do some visualizations
-# Good resouce for plotting: https://robert-alvarez.github.io/2018-06-04-diagnostic_plots/
+# Good resource for plotting: https://robert-alvarez.github.io/2018-06-04-diagnostic_plots/
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from sklearn import datasets
 from sklearn import linear_model
 from sklearn.preprocessing import OneHotEncoder
@@ -100,9 +101,12 @@ result = model.fit()
 result.summary()
 
 # Looking at residual plot of above model
-import seaborn as sns
-sns.residplot(x=boston_df[["ZN", "CHAS", "RM"]], y=boston_df["MEDV"])    # doesn't work
-## START HERE
+y = boston_df["MEDV"]
+y_hat = result.predict()
+resid = y - y_hat
+
+sns.scatterplot(x=y_hat, y=resid).set(xlabel="Predicted Value",
+                                      ylabel="Residual")
 
 # Adding interaction term
 # R^2 is 0.537
@@ -147,9 +151,9 @@ model.fit(X=X_poly, y=boston_df["MEDV"])
 model.score(X=X_poly, y=boston_df["MEDV"])    # Same R^2 value as above
 
 # Residual plot shows a slight non-linearity, yellowbrick
-model2 = ResidualsPlot(linear_model.LinearRegression())
-model2.fit(X=X_poly, y=boston_df["MEDV"])
-model2.show()
+# model2 = ResidualsPlot(linear_model.LinearRegression())
+# model2.fit(X=X_poly, y=boston_df["MEDV"])
+# model2.show()
 
 # Let's try some polynomial regressions in the model see if can get residual plot to improve
 # Using smf.ols
@@ -248,40 +252,86 @@ plt.show()
 
 np.reshape(model.predict(X=X_poly))
 
+## Below works
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
 
+# Define mash size for prediction surface
+mesh_size = .02
+
+# Train model
+model = smf.ols(formula="MEDV ~ ZN + RM + ZN:RM", data=boston_df)
+result = model.fit()
+
+# Define x and y ranges
+# Note: y here refers to y-dimension, not response variable
+x_min, x_max = boston_df["ZN"].min(), boston_df["ZN"].max()
+y_min, y_max = boston_df["RM"].min(), boston_df["RM"].max()
+xrange = np.arange(x_min, x_max, mesh_size)
+yrange = np.arange(y_min, y_max, mesh_size)
+xx, yy = np.meshgrid(xrange, yrange)
+
+# Get predictions for all values of x and y ranges
+pred = model.predict(params=result.params, exog=np.c_[np.ones(shape=xx.ravel().shape), xx.ravel(), yy.ravel(), xx.ravel()*yy.ravel()])
+
+# Reshape predictions to match mesh shape
+pred = pred.reshape(xx.shape)
+
+# Plotting
+fig = px.scatter_3d(boston_df, x='ZN', y='RM', z='MEDV')
+fig.update_traces(marker=dict(size=5))
+fig.add_traces(go.Surface(x=xrange, y=yrange, z=pred, name='predicted_MEDV'))
+fig.show()
+
+## Above works
 
 
 
 ## THIS MIGHT HAVE ACTUALY WORKED
 
+
+## BELOW
 # Trying out plotly
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from sklearn.svm import SVR
 
 mesh_size = .02
 margin = 0
 
-
-# df = px.data.iris()
-#
-# X = df[['sepal_width', 'sepal_length']]
-# y = df['petal_width']
-
-X_poly = poly.fit_transform(X=boston_df[["ZN", "RM"]])
-X = X_poly
-y = boston_df["MEDV"]
-
-# Condition the model on sepal width and length, predict the petal width
-# model = SVR(C=1.)
-# model.fit(X, y)
 
 poly = PolynomialFeatures()
 X_poly = poly.fit_transform(X=boston_df[["ZN", "RM"]])   # include_bias=True is the default here
 model = linear_model.LinearRegression()
 model.fit(X=X_poly, y=boston_df["MEDV"])
 model.score(X=X_poly, y=boston_df["MEDV"])
+
+
+x_min, x_max = boston_df.ZN.min() - margin, boston_df.ZN.max() + margin
+y_min, y_max = boston_df.RM.min() - margin, boston_df.RM.max() + margin
+xrange = np.arange(x_min, x_max, mesh_size)
+yrange = np.arange(y_min, y_max, mesh_size)
+xx, yy = np.meshgrid(xrange, yrange)
+
+pred = model.predict(X=np.c_[xx.ravel(), xx.ravel()**2, yy.ravel(), yy.ravel()**2, xx.ravel()*yy.ravel(), xx.ravel()*yy.ravel()**2])
+
+pred = pred.reshape(xx.shape) # and this
+
+
+fig = px.scatter_3d(boston_df, x='ZN', y='RM', z='MEDV')
+fig.update_traces(marker=dict(size=5))
+fig.add_traces(go.Surface(x=xrange, y=yrange, z=pred, name='pred_surface'))
+fig.show()
+
+## ABOVE
+
+
+# Condition the model on sepal width and length, predict the petal width
+# model = SVR(C=1.)
+# model.fit(X, y)
+
+
 
 # Trying different model
 model = smf.ols(formula="MEDV ~ ZN + RM + I(ZN**2) + I(RM**2) + ZN:RM", data=boston_df)  # then this one, and the next one take out the terms that aren't significant
