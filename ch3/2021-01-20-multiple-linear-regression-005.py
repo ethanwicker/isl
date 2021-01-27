@@ -203,6 +203,67 @@ model = linear_model.LinearRegression()
 model.fit(X=X_poly, y=boston_df["MEDV"])
 model.score(X=X_poly, y=boston_df["MEDV"])
 
+
+sm.graphics.influence_plot(result, size=6)
+
+model = smf.ols("MEDV ~ ZN + I(ZN**2) + RM + I(RM**2) + ZN*RM + I(ZN*RM**2)", data=boston_df)
+result = model.fit()
+studentized_resids = result.outlier_test()
+studentized_resids = studentized_resids.assign(student_resid_abs=abs(studentized_resids["student_resid"]))
+outliers = studentized_resids.sort_values(by="student_resid_abs", ascending=False).head(6)
+
+#df = df[df.index.isin(df1.index)]
+
+boston_df_no_outliers = boston_df[~boston_df.index.isin(outliers.index)]
+
+model_no_outliers = smf.ols("MEDV ~ ZN + ZN**2 + RM + I(RM**2) + ZN*RM + I(ZN*RM**2)", data=boston_df_no_outliers)
+result_no_outliers = model.fit()
+result_no_outliers.summary()
+
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+vifs = [variance_inflation_factor(exog=X_poly, exog_idx=i) for i in range(X_poly.shape[1])]
+predictors = ["ZN", "ZN^2", "RM", "RM^2", "ZN*RM", "(ZN*RM)^2"]
+pd.DataFrame(dict(predictor=predictors, vif=vifs))
+
+X = boston_df[["ZN", "RM"]].to_numpy()
+
+vifs = [variance_inflation_factor(exog=X, exog_idx=i) for i in range(X.shape[1])]
+predictors = ["ZN", "RM"]
+pd.DataFrame(dict(predictor=predictors, vif=vifs))
+
+sm.add_constant(X_poly)
+
+y, X = d
+matrices('annual_inc ~' + features, df, return_type='dataframe')
+vif = pd.DataFrame()
+vif["VIF Factor"] = [variance_inflation_factor(X.values, i) for i in range(X.shape[1])]
+vif["features"] = X.columns
+
+sm.stats.var
+
+# Trying Breusch-Pagan test
+name = ['Lagrange multiplier statistic', 'p-value',
+        'f-value', 'f p-value']
+test = sms.het_breuschpagan(results.resid, results.model.exog)
+lzip(name, test)
+
+import statsmodels.stats.api as sms
+from statsmodels.compat import lzip
+
+returned_names = ['Lagrange multiplier statistic', 'p-value',
+                  'f-value', 'f p-value']
+
+bp_test_results = sms.het_breuschpagan(resid, X_poly)
+lzip(returned_names, bp_test_results)
+
+
+sms.lzip(name, test)
+
+pd.compat.lzip(name, test)
+
+
+
 y = boston_df["MEDV"]
 y_hat = model.predict(X=X_poly)
 resid = y - y_hat
