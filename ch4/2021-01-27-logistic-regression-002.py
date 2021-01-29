@@ -140,6 +140,15 @@ log_reg.predict(X)
 X = titanic[["sex", "age", "fare"]].to_numpy()
 y = titanic["survived"].to_numpy()
 
+## Let's continue with this to finish it
+# Goal:
+# Convert age to a OneHotEncoded dense matrix manually, and then combine together
+# Do the same for statsmodels both sm.OLS and smf.ols
+# Then do predict survived or not
+# Discussing upsampling may improve results, but don't do here
+# Show a 3D plot with a 3D logistic plane
+# Then predict the ticket_class just to show that multiclass/multinomial logistic regression is possible and familiarize myself with it
+
 
 # This isn't working: Use what is on the link below to do the column stuff in scikit-learn
 encoder = OneHotEncoder(sparse=False)
@@ -152,9 +161,9 @@ log_reg.score(X, y)
 
 
 # useful thread maybe: https://stackoverflow.com/questions/59481354/dummify-categorical-variables-for-logistic-regression-with-pandas-and-scikit-on
-# Also read this: useful thread: https://medium.com/dunder-data/from-pandas-to-scikit-learn-a-new-exciting-workflow-e88e2271ef62
 
-
+# Definitely write a blog post summarizing this information:
+# https://medium.com/dunder-data/from-pandas-to-scikit-learn-a-new-exciting-workflow-e88e2271ef62
 
 
 
