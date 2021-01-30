@@ -17,6 +17,8 @@ import janitor
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import seaborn as sns
 import statsmodels.api as sm
 
@@ -155,17 +157,14 @@ np.sum(y.reshape(-1) == y_hat) / len(y)  # same .77731 value
 
 
 # Now creating 3D plot
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
 
 # Define mash size for prediction surface
 mesh_size = .02
 
-# Removing age field, not significant
+# Removing age field because not significant
 X_sex_fare = np.delete(X, obj=1, axis=1)
 
-# Fitting
+# Fitting model
 log_reg.fit(X=X_sex_fare, y=y)
 
 # Define x and y ranges
@@ -183,8 +182,6 @@ pred = log_reg.predict(X=np.c_[xx.ravel(), yy.ravel()])
 pred = pred.reshape(xx.shape)
 
 # Plotting
-# The interpretation of this would really be two functions, because sex is categorical
-# But hyperplane shows change between sexs
 fig = px.scatter_3d(titanic,
                     x='sex',
                     y='fare',
@@ -192,11 +189,11 @@ fig = px.scatter_3d(titanic,
                     labels=dict(sex="Sex (1 if male, 0 if female)",
                                 fare="Ticket Fare",
                                 survived="Survived"))
-
 fig.update_traces(marker=dict(size=5))
 fig.add_traces(go.Surface(x=xrange, y=yrange, z=pred, name='pred_surface'))
 fig.show()
 
+#########################
 
 # Multiclass Logistic Regression with scikit-learn
 encoder = OneHotEncoder(sparse=False, drop="first")
@@ -219,4 +216,6 @@ log_reg.fit(X=X, y=y)
 log_reg.score(X, y)
 
 log_reg.predict(X)[:10]
+
+
 
