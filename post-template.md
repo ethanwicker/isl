@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Multiple Linear Regression #1"
-subtitle: A Brief Introductio
+subtitle: A Brief Introduction
 comments: false
 ---
 
