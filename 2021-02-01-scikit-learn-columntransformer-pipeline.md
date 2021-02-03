@@ -15,7 +15,7 @@ For this working example, I'll be using the same slimmed down Titanic dataset fr
 
 Below, I'll make use of the `ColumnTransformer` estimator to encode two categorical fields via scikit-learn's `OneHotEncoder`.  Because scikit-learn machine learning models require their input to be two-dimensional numerical arrays, an encoding preprocessing step is required.
 
-I'll also use `SimpleImputer` estimator to preform some preprocessing of numerical fields.  Lastly, I'll perform a ridge regression and wrap all of these steps into a reusable and convenient `Pipeline`.
+I'll also use the `SimpleImputer` and `StandardScaler` estimators to preform some preprocessing of numerical fields.  Lastly, I'll perform a regularized logistic regression and wrap all of these steps into a reusable and convenient `Pipeline`.
 
 For example purposes further along in this post, I'll take the last 10 rows of `titanic` as a test dataset, and allocate the remaining rows as my training data.
 
@@ -36,10 +36,10 @@ from sklearn.preprocessing import OneHotEncoder
 encoder = OneHotEncoder(sparse=False)
 
 # Encoding categorical field
-X_categorical = titanic_train[["sex"]]
-X_categorical_encoded = encoder.fit_transform(X_categorical)
+sex_train = titanic_train[["sex"]]
+sex_train_encoded = encoder.fit_transform(sex_train)
 
->>> X_categorical_encoded
+>>> sex_train_encoded
 array([[0., 1.],
        [1., 0.],
        [1., 0.],
@@ -59,15 +59,15 @@ Notice that a NumPy array was returned.  We can access column names indicating w
 array(['x0_female', 'x0_male'], dtype=object)
 ```
 
-We can also use the `inverse_transform()` method to return the original categorical label from the `sex` column.  Notice the brackets around `X_categorical[0]` that force a list to returned instead of a NumPy array.
+We can also use the `inverse_transform()` method to return the original categorical label from the `sex` column.  Notice the brackets around `sex_train_encoded[0]` that force a list to be returned instead of a NumPy array.
 
 ```python
-# Inverse transforming the first row of X_categorical_encoded
->>> encoder.inverse_transform([X_categorical_encoded[0]])
+# Inverse transforming the first row
+>>> encoder.inverse_transform([sex_train_encoded[0]])
 array([['male']], dtype=object)
 
-# Inverse transforming all rows of X_categorical_encoded
->>> encoder.inverse_transform(X_categorical_encoded)
+# Inverse transforming all rows
+>>> encoder.inverse_transform(sex_train_encoded)
 array([['male'],
        ['female'],
        ['female'],
@@ -76,9 +76,9 @@ array([['male'],
        ['male'],
        ['female']], dtype=object)
 
-# Verifying arrays are equivalent after inverse transforming X_categorical_encoded
->>> np.array_equal(encoder.inverse_transform(X_categorical_encoded), 
-                   X_categorical)
+# Verifying arrays are equivalent after inverse transforming
+>>> np.array_equal(encoder.inverse_transform(sex_train_encoded), 
+                   sex_train_encoded)
 True
 ```
 
@@ -296,18 +296,18 @@ pipeline_categorical = Pipeline([step_simple_imputer_categorical, step_encoder_c
 columns_categorical = ["sex", "ticket_class"]
 
 # Defining column transformer
-column_transformer_categorical = [("column_transformer_categorical",
-                                   pipeline_categorical,
-                                   columns_categorical)]
+transformers_categorical = [("transformers_categorical",
+                             pipeline_categorical,
+                             columns_categorical)]
 
 # Creating column transformer
-column_transformer = ColumnTransformer(transformers=column_transformer_categorical)
+column_transformer = ColumnTransformer(transformers=transformers_categorical)
 ```
 
 Because our `ColumnTransformer` selects columns, we can pass the entire `titanic_train` `DataFrame` to it.  The defined columns will be select and transformed as appropriate.  We could of course pass `titanic_test` to our `ColumnTransformer` as well.
 
 ```python
-column_transformer.fit_transform(titanic_train)
+>>> column_transformer.fit_transform(titanic_train)
 array([[0., 1., 0., 0., 1.],
        [1., 0., 1., 0., 0.],
        [1., 0., 0., 0., 1.],
@@ -321,13 +321,181 @@ To get the feature names of our encoded variables as we have done before, we nee
 
 ```python
 (column_transformer
-    .named_transformers_["column_transformer_categorical"]
+    .named_transformers_["transformers_categorical"]
     .named_steps["encoder"]
     .get_feature_names())
 ```
 
 #### Transforming Numeric Columns
 
+Next, let's transform our numeric columns.  We'll impute missing numeric values using the median of that column, and then standardize the values.
 
+```python
+from sklearn.preprocessing import StandardScaler
 
+# Creating steps
+step_simple_imputer_numeric = ("simple_imputer", SimpleImputer(strategy="median"))
+step_standard_scaler_numeric = ("standard_scaler", StandardScaler())
 
+# Creating pipeline
+pipeline_numeric = Pipeline([step_simple_imputer_numeric,
+                             step_standard_scaler_numeric])
+
+# Defining numeric columns
+columns_numeric = ["age", "fare"]
+
+# Defining column transformer
+transformers_numeric = [("transformers_numeric",
+                         pipeline_numeric,
+                         columns_numeric)]
+
+# Creating column transformer
+column_transformer = ColumnTransformer(transformers=transformers_numeric)
+```
+
+Just as before, we can fit the `ColumnTransformer` directly to our `DataFrame`, and then transform it as appropriately.
+
+```python
+>>> column_transformer.fit_transform(titanic_train)
+array([[-0.52929637, -0.52052854],
+       [ 0.56642281,  0.68305589],
+       [-0.25536658, -0.50784109],
+       ...,
+       [-0.66626127, -0.47173729],
+       [-0.73474371, -0.50838994],
+       [ 1.79910688,  0.90626108]])
+```
+
+### Combining Categorical and Numeric Column Transformers
+
+Next, let's modify our `ColumnTransformer` structure so that we can perform both the categorical and numeric transformations in parallel.  The two resulting transformed NumPy arrays will be concatenated together into one array. 
+
+```python
+# Defining column transformer
+>>> transformers = \
+        [("transformers_categorical", pipeline_categorical, columns_categorical),
+        ("transformers_numeric", pipeline_numeric, columns_numeric)]
+
+# Creating column transformer
+>>> column_transformer = ColumnTransformer(transformers=transformers)
+
+# Transforming both categorical and numeric columns
+>>> column_transformer.fit_transform(titanic_train)
+array([[ 0.        ,  1.        ,  0.        , ...,  1.        , -0.52929637        ,-0.52052854],
+       [ 1.        ,  0.        ,  1.        , ...,  0.        ,  0.56642281        , 0.68305589],
+       [ 1.        ,  0.        ,  0.        , ...,  1.        , -0.25536658        ,-0.50784109],
+       ...,
+       [ 0.        ,  1.        ,  0.        , ...,  1.        , -0.66626127        ,-0.47173729],
+       [ 0.        ,  1.        ,  0.        , ...,  1.        , -0.73474371        ,-0.50838994],
+       [ 1.        ,  0.        ,  1.        , ...,  0.        ,  1.79910688        ,0.90626108]])
+```
+
+### Training a Machine Learning Model
+
+Finally, let's update our `Pipeline` to feed our transformed data into a machine learning model.  We'll train a logistic regression model below.  Unlike in my prior posts, this time I will make use of the `LogisticRegression()`'s default regularization since we standardized our numeric predictor variables.
+
+Below, we'll just use the `fit()` method instead of `fit_transform()`, because our final step in the `Pipeline` will be to actually fit the model.
+
+```python
+from sklearn.linear_model import LogisticRegression
+
+# Creating steps
+step_column_transformers = ("column_transformers", column_transformer)
+step_logistic_regression = ("logistic_regression", LogisticRegression())
+
+# Creating pipeline
+log_reg_pipeline = Pipeline([step_column_transformers, step_logistic_regression])
+
+# Assiging y
+y = titanic_train["survived"]
+
+# Transforming data and fitting model
+log_reg_pipeline.fit(titanic_train, y)
+```
+
+We can use the `score()` method to return the correct classification rate.
+
+```python
+>>> log_reg_pipeline.score(titanic_train, y)
+0.7911931818181818
+```
+
+### Cross-validation
+
+Of course, the above correct classification rate value indicates the results on the training set.  To get a better idea of how our model might perform on test data, let's perfom a 10-fold cross-validation.
+
+```python
+>>> from sklearn.model_selection import KFold, cross_val_score
+
+# Initializing k-fold cross-validator
+>>> k_fold = KFold(n_splits=10, shuffle=True, random_state=123)
+
+# Getting cross-validation scores
+>>> cross_val_scores = cross_val_score(estimator=log_reg_pipeline, 
+                                       X=titanic_train, 
+                                       y=y, 
+                                       cv=k_fold)
+
+# Getting average cross-validation score
+>>> cross_val_scores.mean()
+0.785513078470825
+```
+
+### Grid Search
+
+Lastly, let's perform a grid search to determine the optimal values of our transformation and fitting procedures.  We'll pass a dictionary object to scikit-learn's `GridSearchCV`.  We'll need to put double underscores between the name of each layer in our `Pipeline`, as well as the actual parameter name.
+
+```python
+from sklearn.model_selection import GridSearchCV
+
+# Defining parameter grid
+param_grid = {
+    "column_transformers__transformers_numeric__simple_imputer__strategy":
+        ["mean", "median"],
+    "logistic_regression__C":
+        [.0001, .001, .01, .1, 1, 10, 100, 1000]
+}
+
+# Initializing grid search
+grid_search = GridSearchCV(estimator=log_reg_pipeline,
+                           param_grid=param_grid,
+                           cv=k_fold)
+
+# Fitting grid search
+grid_search.fit(titanic_train, y)
+```
+
+We can also view the best parameter combination and the best score.
+
+```python
+
+>>> grid_search.best_params_
+{'column_transformers__transformers_numeric__simple_imputer__strategy': 'mean', 'logistic_regression__C': 10}
+
+>>> grid_search.best_score_
+0.7869215291750503
+```
+
+We can view detailed results as a pandas `DataFrame` as well.
+
+```python
+>>> pd.DataFrame(grid_search.cv_results_)
+    mean_fit_time  std_fit_time  ...  std_test_score  rank_test_score
+0        0.201999      0.415343  ...        0.066751               15
+1        0.014747      0.000764  ...        0.060855               13
+2        0.016023      0.001118  ...        0.038972               11
+3        0.019522      0.003494  ...        0.055859                7
+4        0.020603      0.002647  ...        0.059064                9
+5        0.018984      0.003322  ...        0.060287                1
+6        0.016421      0.000717  ...        0.060287                1
+7        0.016278      0.000662  ...        0.060287                1
+8        0.015751      0.000653  ...        0.066751               15
+9        0.016661      0.002365  ...        0.060855               13
+10       0.017589      0.001195  ...        0.038972               11
+11       0.018600      0.001226  ...        0.055859                7
+12       0.018348      0.000565  ...        0.059064                9
+13       0.018073      0.001442  ...        0.060287                1
+14       0.016373      0.000261  ...        0.060287                1
+15       0.017112      0.001278  ...        0.060287                1
+[16 rows x 20 columns]
+```
