@@ -84,13 +84,12 @@ True
 
 ### Applying Transformations to Training & Test Sets
 
-Whenever we transform a training field, we must also transform the corresponding field in the test set.  We must do this *after* splitting up the training and test datasets, instead of performing the transformation first and then splitting the data.  If we used the latter method here, some information from our test set would leak over into our training set.  This mistake is something referred to as *data leakage*.
+Whenever we transform a training field, we must also transform the corresponding field in the test set.  We must do this *after* splitting up the training and test datasets, instead of performing the transformation first and then splitting the data.  If we used the latter method here, some information from our test set would leak over into our training set.  This mistake is sometimes referred to as *data leakage*.
 
 ```python
 # Encoding the sex column of our test dataset
->>> X_categorical_test = titanic_test[["sex"]].copy()
-
->>> encoder.transform(X_categorical_test)
+>>> sex_test = titanic_test[["sex"]].copy()
+>>> encoder.transform(sex_test)
 array([[1., 0.],
        [0., 1.],
        [1., 0.],
@@ -109,14 +108,14 @@ Although the above example worked well, occasionally we'll run into problems whe
 
 #### Problem #1: ValueError: Found unknown categories
 
-Occasionally, a value will be present in our test set that is not present in our training set.  This can present a problem, as our initialized one-hot encoder is expecting the same unique label value as the training set.
+Occasionally, a value will be present in our test set that is not present in our training set.  This can present a problem, as our initialized one-hot encoder is expecting the same unique label values as the training set.
 
-Let's suppose the first value of `X_categorical_test` was misspelled `fmale` instead of `female`.
+Let's suppose the first value of `sex_test` was misspelled `fmale` instead of `female`.
 
 ```python
->>> X_categorical_test.iloc[0, 0] = "fmale"
+>>> sex_test.iloc[0, 0] = "fmale"
 
->>> X_categorical_test.head()
+>>> sex_test.head()
         sex
 704   fmale
 705    male
@@ -128,7 +127,7 @@ Let's suppose the first value of `X_categorical_test` was misspelled `fmale` ins
 If we attempt the transformation on this new `DataFrame`, we'll get an error indicating an unknown category was found.
 
 ```python
->>> encoder.transform(X_categorical_test)
+>>> encoder.transform(sex_test)
 ValueError: Found unknown categories ['fmale'] in column 0 during transform
 ```
 
@@ -139,11 +138,11 @@ In practice, we should investigate this issue further.  However, for this exampl
 >>> encoder = OneHotEncoder(sparse=False, handle_unknown="ignore")
 
 # Fitting on training observations
->>> encoder.fit(X_categorical)
+>>> encoder.fit(sex_train)
 
 # Transforming test observations
 # Notice first row is all 0's
->>> encoder.transform(X_categorical_test)
+>>> encoder.transform(sex_test)
 array([[0., 0.],
        [0., 1.],
        [1., 0.],
@@ -160,19 +159,18 @@ array([[0., 0.],
 
 Handling missing values in our test set is similar to handling unknown values in our test set.  If we initialize our encoder with `handle_unknown="ignore"`, these missing observations will be gracefully handled and encoded as rows of all 0's.
 
-Note, it appears the 0.24.1 release of scikit-learn included an upgrade to `OneHotEncoder` allowing it to handle `None` values, but not `NaN` values.
+Note, it appears the 0.23.2 release of scikit-learn is able to have `None` values but not `NaN` values.
 
-## NOTE: I downgraded back to 0.23 here, make sure this still works
 
 ```python
-# Assigning None to some elements of X_categorical_test
->>> X_categorical_test.iloc[1, 0] = None
->>> X_categorical_test.iloc[2, 0] = None
->>> X_categorical_test.head()
+# Assigning None to some elements of sex_test
+>>> sex_test.iloc[1, 0] = None
+>>> sex_test.iloc[2, 0] = None
+>>> sex_test.head()
 
 # Encoding
 # Notice first three rows are all 0's
->>> encoder.transform(X_categorical_test)
+>>> encoder.transform(sex_test)
 array([[0., 0.],
        [0., 0.],
        [0., 0.],
@@ -189,7 +187,7 @@ array([[0., 0.],
 
 In the event where we do have missing data, it can be useful to *impute* the missing values.  We can use scikit-learn's `SimpleImputer` transformer for this from the `impute` module.
 
-Let's artificially create an `NaN` value in `X_categorical_copy` below, and impute this missing values.  We can use the `strategy` parameter to control how the imputation is done.  For numerical data, `strategy` can be set to either `mean` or `median`.   For categorical data, we can set `strategy` to `constant`, which will allow us to set a constant string value to convert missing values to.  We can also let `strategy=most_frequent` for both numerical and categorical observations, which will replace missing values with the most frequent observation in that column.
+Let's artificially create an `NaN` value in `sex_train_copy` below, and impute this missing values.  We can use the `strategy` parameter to control how the imputation is done.  For numerical data, `strategy` can be set to either `mean` or `median`.   For categorical data, we can set `strategy` to `constant`, which will allow us to set a constant string value to convert missing values to.  We can also set `strategy="most_frequent"` for both numerical and categorical observations, which will replace missing values with the most frequent observation in that column.
 
 When `strategy` is equal to `"constant"`, we can optionally use the `fill_value` parameter to create the constant string value.  Below we'll just use the default value of `missing_value`.
 
@@ -197,22 +195,22 @@ When `strategy` is equal to `"constant"`, we can optionally use the `fill_value`
 from sklearn.impute import SimpleImputer
 
 # Assigning first element as NaN
-X_categorical_copy = X_categorical.copy()
-X_categorical_copy.iloc[0, 0] = np.nan
+sex_train_copy = sex_train.copy()
+sex_train_copy.iloc[0, 0] = np.nan
 
 # Initializing SimpleImputer
 # fill_value="missing_value" by default
 simple_imputer = SimpleImputer(strategy="constant")
 
 # Fitting and transforming
-X_categorical_copy_imputer = simple_imputer.fit_transform(X_categorical_copy)
-X_categorical_copy_imputer
+sex_train_copy_imputed = simple_imputer.fit_transform(sex_train_copy)
+sex_train_copy_imputed
 ```
 
 Now, we can use the `fit_transform()` method as before for encoding.
 
 ```python
->>> encoder.fit_transform(X_categorical_copy_imputer)
+>>> encoder.fit_transform(sex_train_copy_imputed)
 array([[0., 0., 1.],
        [1., 0., 0.],
        [1., 0., 0.],
@@ -224,9 +222,9 @@ array([[0., 0., 1.],
 
 ### scikit-learn `Pipeline`s
 
-Instead of manually applying multiple fitting and transformation steps, we can instead use a `Pipeline`.  A `Pipeline` allows a list of transformations to be successively run, and a model can be trained as the last estimator.  `Pipeline`s are especially useful for reproducibe workflows, such as applying the same transformation to training and test sets or different subsets of a dataset during cross validation.
+Instead of manually applying multiple fitting and transformation steps, we can instead use a `Pipeline`.  A `Pipeline` allows a list of transformations to be successively run, and a model can also be trained as the last estimator.  `Pipeline`s are especially useful for reproducibe workflows, such as applying the same transformation to training and test sets or different subsets of a dataset during cross validation.
 
-Each step in the `Pipeline` consist of a two-item tuple.  The first element of the tuple is a string that labels the step, and the second element is an initialized estimator.  The output of each previous step will be the input to the next step.
+Each step in the `Pipeline` consists of a two-item tuple.  The first element of the tuple is a string that labels the step, and the second element is an initialized estimator.  The output of each previous step will be the input to the next step.
 
 ```python
 from sklearn.pipeline import Pipeline
@@ -239,13 +237,13 @@ step_encoder = ("encoder", OneHotEncoder(sparse=False, handle_unknown="ignore"))
 pipeline = Pipeline([step_simple_imputer, step_encoder])
 
 # Fitting and transforming
-pipeline.fit_transform(X_categorical_copy)
+pipeline.fit_transform(sex_train_copy)
 ```
 
 After fitting the `Pipeline` on the training data, it is easy to transform the test data.  Notice that because the pipeline has already been fit, we do not need to refit it below, and can instead just call `transform()`. 
 
 ```python
-pipeline.transform(X_categorical_test)
+pipeline.transform(sex_test)
 ```
 
 #### Transforming Multiple Categorical Columns
@@ -253,8 +251,8 @@ pipeline.transform(X_categorical_test)
 It is simple as well to use our `Pipeline` on multiple categorical columns.  Just refit the `Pipeline` and run the transformation.
 
 ```python
-X_categorical = titanic_train[["sex", "ticket_class"]]
-pipeline.fit_transform(X_categorical)
+multiple_fields = titanic_train[["sex", "ticket_class"]]
+pipeline.fit_transform(multiple_fields)
 ```
 
 #### Accessing Steps in our Pipeline
@@ -276,7 +274,7 @@ The `ColumnTransformer` takes a three-item tuple of the following structure:
 ("name_of_column_transformer", "SomeTransformer(parameters), columns_to_transform")
 ```
 
-The `columns_to_transform` could be a list of column names or integer indexs, a boolean array, or a function that resolves to a selection of columns.
+The `columns_to_transform` could be a list of column names or integer indices, a boolean array, or a function that resolves to a selection of columns.
 
 #### Passing a `Pipeline` to a `ColumnTransformer`
 
@@ -317,7 +315,7 @@ array([[0., 1., 0., 0., 1.],
        [1., 0., 1., 0., 0.]])
 ```
 
-To get the feature names of our encoded variables as we have done before, we need to use the `named_transformers_` attribute of our `ColumnTransformer`.  After doing so, we can then `named_steps` attribute of our pipeline as before.
+To get the feature names of our encoded variables as we have done before, we need to use the `named_transformers_` attribute of our `ColumnTransformer`.  After doing so, we can then use the `named_steps` attribute of our pipeline as before.
 
 ```python
 (column_transformer
@@ -392,7 +390,7 @@ array([[ 0.        ,  1.        ,  0.        , ...,  1.        , -0.52929637    
 
 ### Training a Machine Learning Model
 
-Finally, let's update our `Pipeline` to feed our transformed data into a machine learning model.  We'll train a logistic regression model below.  Unlike in my prior posts, this time I will make use of the `LogisticRegression()`'s default regularization since we standardized our numeric predictor variables.
+Next, let's update our `Pipeline` to feed our transformed data into a machine learning model.  We'll train a logistic regression model below.  Unlike in my prior posts, this time I will make use of `LogisticRegression()`'s default regularization since we standardized our numeric predictor variables.
 
 Below, we'll just use the `fit()` method instead of `fit_transform()`, because our final step in the `Pipeline` will be to actually fit the model.
 
@@ -406,7 +404,7 @@ step_logistic_regression = ("logistic_regression", LogisticRegression())
 # Creating pipeline
 log_reg_pipeline = Pipeline([step_column_transformers, step_logistic_regression])
 
-# Assiging y
+# Assigning y
 y = titanic_train["survived"]
 
 # Transforming data and fitting model
@@ -422,7 +420,7 @@ We can use the `score()` method to return the correct classification rate.
 
 ### Cross-validation
 
-Of course, the above correct classification rate value indicates the results on the training set.  To get a better idea of how our model might perform on test data, let's perfom a 10-fold cross-validation.
+Of course, the above correct classification rate value indicates the results on the training set.  To get a better idea of how our model might perform on test data, let's perform a 10-fold cross-validation.
 
 ```python
 >>> from sklearn.model_selection import KFold, cross_val_score
@@ -468,7 +466,6 @@ grid_search.fit(titanic_train, y)
 We can also view the best parameter combination and the best score.
 
 ```python
-
 >>> grid_search.best_params_
 {'column_transformers__transformers_numeric__simple_imputer__strategy': 'mean', 'logistic_regression__C': 10}
 
