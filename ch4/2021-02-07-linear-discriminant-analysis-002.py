@@ -84,7 +84,7 @@ lda.score(X, y)   # actually worse than the one above
 
 ##########
 
-# the null classifier that predicts every dies always is right 0.594 of the time
+# the null classifier that predicts every passenger dies always is right 0.594 of the time
 sum(titanic["survived"] == 0) / len(titanic)   # 0.594
 
 # Confusion matrix
