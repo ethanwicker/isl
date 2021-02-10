@@ -25,7 +25,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import plot_confusion_matrix
-from sklearn.metrics import plot_roc_curve
 
 titanic = pd.read_csv("~/python/isl/data/titanic-train-kaggle.csv")
 
@@ -148,5 +147,9 @@ roc_lda = plot_roc_curve(estimator=lda, X=X, y=y)
 roc_log_reg = plot_roc_curve(estimator=log_reg, X=X, y=y, ax=roc_lda.ax_)
 plt.title("ROC Curve Comparison")
 plt.show()
+
+
+
+
 
 
