@@ -33,7 +33,7 @@ The structure of this post was influenced by the fifth chapter of *An Introducti
 
 ### The Validation Set Approach
 
-To evaluate a model's performance or select optimal flexibility, we are often interested in how the model performs on a test dataset.  That is, a dataset that was not used to train the model, and is thus *new* data the model has not seen before.  In particular, we are often interested in selecting a model with low test error.  
+To evaluate a model's performance or select optimal flexibility, we are often interested in how the model performs on a test dataset.  That is, a dataset that was not used to train the model, and thus contains *new* data the model has not seen before.  In particular, we are often interested in selecting a model with low test error.  
 
 Of course, we are interested in test error and not *training error* because training error can be deceiving and often underestimates test error.  Because the observations used to train the model are also used to calculate the training error, models with more flexibility that can better fit the nuances of the training data will tend to have lower training error.  We refer to this as *overfitting*, and overfit models will tend to perform poorly on new test data. 
 
@@ -45,7 +45,7 @@ A common training set/validation set split of 70%/30% or 80%/20% is commonly use
 
 The validation set approach is conceptually quite simple and easy to implement, and is particularly useful for demonstration purposes, but has two potential drawbacks:
 
-1. Due to the randomness of creating the training and validation sets, the validation set estimate of the test error is often highly variable.  A group of outliers, for example, may end up in the training set, the validation set, or split among both sets due to chance.
+1. Due to the randomness of creating the training and validation sets, the validation set estimate of the test error is often highly variable.  A group of outliers, for example, may end up in the training set, the validation set, or split among both sets simply due to chance.
 
 2. Since a subset of observations is intentionally left out of model training, the model is trained on less data.  Because models tend to perform better when more data is available, the resulting validation set error rate will tend to overestimate the test error rate.  If the same model were fit on all available observations, it would likely provide a lower test error rate in practice.
 
