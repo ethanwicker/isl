@@ -108,13 +108,56 @@ X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     random_state=1234,
                                                     shuffle=True)
 
+# Initializing and fitting on training observations
 lda = LinearDiscriminantAnalysis()
-lda.fit_transform(X=X, y=y)  # I don't think y here is being considered a categorical variable
+lda.fit(X=X_train, y=y_train)
+
+lda.predict(X_train) # training predictions
+lda.predict(X_test)  # training predictions
+lda.score(X=X_train, y=y_train)  # training error rate
+lda.score(X=X_test, y=y_test)    # test error rate
+
+
+
 
 ####
+# KFold/really Stratified KFold
 # Creating a pipeline to scale data and then train log reg, quadratic log reg, LDA, QDA with KFold/really Stratified KFold
 # Logistic regression here is going to be a one-vs-rest multi-class logistic regression classifier
 ####
+
+# Something like this what I want
+# From: https://stackoverflow.com/questions/51629153/more-than-one-estimator-in-gridsearchcvsklearn
+
+# from sklearn.pipeline import Pipeline
+# from sklearn.svm import SVC
+# from sklearn.tree import DecisionTreeClassifier
+# from sklearn.model_selection import GridSearchCV
+# from sklearn.datasets import load_iris
+# iris_data = load_iris()
+# X, y = iris_data.data, iris_data.target
+#
+#
+# # Just initialize the pipeline with any estimator you like
+# pipe = Pipeline(steps=[('estimator', SVC())])
+#
+# # Add a dict of estimator and estimator related parameters in this list
+# params_grid = [{
+#                 'estimator':[SVC()],
+#                 'estimator__C': [1, 10, 100, 1000],
+#                 'estimator__gamma': [0.001, 0.0001],
+#                 },
+#                 {
+#                 'estimator': [DecisionTreeClassifier()],
+#                 'estimator__max_depth': [1,2,3,4,5],
+#                 'estimator__max_features': [None, "auto", "sqrt", "log2"],
+#                 },
+#                # {'estimator':[Any_other_estimator_you_want],
+#                #  'estimator__valid_param_of_your_estimator':[valid_values]
+#
+#               ]
+#
+# grid = GridSearchCV(pipe, params_grid)
 
 ####
 # Same as above with LeaveOneOut
