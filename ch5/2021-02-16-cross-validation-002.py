@@ -11,27 +11,6 @@
 
 # train_test_split helper https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.train_test_split.html#sklearn.model_selection.train_test_split
 
-# >>> import numpy as np
-# >>> from sklearn.model_selection import train_test_split
-# >>> from sklearn import datasets
-# >>> from sklearn import svm
-#
-# >>> X, y = datasets.load_iris(return_X_y=True)
-# >>> X.shape, y.shape
-# ((150, 4), (150,))
-#
-# >>> X_train, X_test, y_train, y_test = train_test_split(
-# ...     X, y, test_size=0.4, random_state=0)
-#
-# >>> X_train.shape, y_train.shape
-# ((90, 4), (90,))
-# >>> X_test.shape, y_test.shape
-# ((60, 4), (60,))
-#
-# >>> clf = svm.SVC(kernel='linear', C=1).fit(X_train, y_train)
-# >>> clf.score(X_test, y_test)
-# 0.96...
-
 # Discuss cross_val_score
 # When the cv argument is an integer, cross_val_score uses the KFold or StratifiedKFold strategies by default, (think StratifiedKFold here if doing classifier)
 # talk about pipelines and using to prevent data leak
@@ -86,7 +65,7 @@ data = (iris["frame"]
                how="left"))
 
 ####
-# Plot Iris as a scatterplot and show all the classes with different colors
+# Plot Iris as a scatter plot and show all the classes with different colors
 ####
 
 import seaborn as sns
@@ -126,11 +105,27 @@ lda.score(X=X_test, y=y_test)    # test error rate
 # But also do some by hand for practice and such, and future notes to myself
 # Create a pipeline to scale data and then train log reg, quadratic log reg, LDA, QDA with KFold/really Stratified KFold
 # Logistic regression here is going to be a one-vs-rest multi-class logistic regression classifier
+
+# Have a section "Comments on Repeated Cross-Validation"
+# Paper: https://limo.libis.be/primo-explore/fulldisplay?docid=LIRIAS1655861&context=L&vid=Lirias&search_scope=Lirias&tab=default_tab&lang=en_US&fromSitemap=1
+
+# This paper arguments that repeated k-fold CV does not do much good
+# We are interested in sigma_2, which is the predictive accuracy on a fixed sample S taken from a Population P.  We want to know how well our model will perform basically, only using our sampel S
+# However, this sigma_2 value has both bias (because S is a subset, S_2 will be different) and
+# it has high variance because of the nature of taking k random folds.  Doing the CV again will give a different value of sigma_2
+# The paper argues that repeated k-fold CV can reduce this variance but not the bias
+# repeated k-fold CV is useful to accurately estimate u_k, the mean of all CV results across all possible ways to split
+# But u_k is not necessary an accurate estimate of sigma_2.  We're interested in sigma_2, and we still get a biased estimate because S itself is a random sample from the population P
+# Repeated CV is at the best a waste of computation resources, and at the worse misleading
+
 ####
 
 from sklearn.model_selection import cross_val_score
+
+# Comment: Above had to use _train and _test sets, but with k-Fold can use entirety of X and y
+
 lda = LinearDiscriminantAnalysis()
-# This time can use the entirety of X and y
+
 # 5-fold k-fold cross-validation by default, doing 10-fold below
 scores = cross_val_score(lda, X, y, cv=10)   # Performing stratified k-Fold CV here --> keeping class labels roughly same in each fold
 scores # view the scores
@@ -138,9 +133,7 @@ scores.mean()
 scores.std()
 
 # We can also repeat the above stratified k-fold procedure multiple times
-# Since folds are random,
-# this gives us a better idea of the underlying structure true test error we are attempting to estimate
-# Also more stable results when comparing models
+# Look at above notes. Will show this code because it's interesting, but not useful in practice.
 from sklearn.model_selection import RepeatedStratifiedKFold
 cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=5, random_state=1234)
 scores = cross_val_score(lda, X, y, cv=cv)
@@ -154,11 +147,10 @@ pd.DataFrame(data=dict(mean_cv_score=mean_cv_scores,
                        repeat=["Repeat " + str(i) for i in range(1, 6)]))
 
 
-# I can use this to perform the quadratic logistic regression in a pipeline just for quadratic logistic regression
-poly = PolynomialFeatures(degree=2, interaction_only=False, include_bias=False)
-X_poly = poly.fit_transform(X_train)
-X_poly.shape
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import PolynomialFeatures
 
+from sklearn.pipeline import Pipeline
 
 # I want pipeline steps for
 # LDA
@@ -173,51 +165,60 @@ X_poly.shape
 # pipeline = Pipeline([step_simple_imputer, step_encoder])
 
 
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
 
-from sklearn.pipeline import Pipeline
-
-pipeline_lda = ("lda", (Pipeline([("lda", LinearDiscriminantAnalysis())])))
-pipeline_qda = ("qda", Pipeline([("qda", QuadraticDiscriminantAnalysis())]))
-pipeline_log_reg = ("log_reg", Pipeline([("log_reg", LogisticRegression(penalty="none"))]))
+# Creating individual pipelines
+# Not scaling, just for demonstration purposes of code
+# I SHOULD JUST STANDARDIZE EVERYTHING
+pipeline_lda = ("LDA", (Pipeline([("lda", LinearDiscriminantAnalysis())])))
+pipeline_qda = ("QDA", Pipeline([("qda", QuadraticDiscriminantAnalysis())]))
+pipeline_log_reg = ("Logistic Regression", Pipeline([("log_reg", LogisticRegression(penalty="none"))]))
 pipeline_quadratic_log_reg = \
-    ("quadratic_log_reg", Pipeline([
-        ("polynomial_features", PolynomialFeatures()),
+    ("Quadratic Logistic Regression", Pipeline([
+        # Standizing here so LDFGS solver works
+        ("standard_scaler", StandardScaler()),
+        ("polynomial_features", PolynomialFeatures(degree=2, interaction_only=False)),
         ("logistic_regression", LogisticRegression(penalty="none"))
     ]))
 
+# Constructing list of pipelines
 pipelines = [
     pipeline_lda,
     pipeline_qda,
     pipeline_log_reg,
+    # Might just take out the quad log reg here
     pipeline_quadratic_log_reg
 ]
 
-cross_val_score(LogisticRegression(penalty="none"), X, y, cv=cv)
-
-cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=5, random_state=1234)
-
+# Initializing DataFrame for results
 results = pd.DataFrame()
 
+# Looping through pipelines, storing results
 for pipe, model in pipelines:
-    print(pipe)
-    print(model)
-    cv_scores = cross_val_score(LogisticRegression(penalty="none"), X, y, cv=cv)
+
+    # Getting cross validation scores
+    cv_scores = cross_val_score(model, X, y, cv=cv)
+
+    # Calculating mean CV scores (approximation for mu_1 in paper's notation)
     cv_scores_mean = pd.DataFrame(data=cv_scores.reshape(10, 5)).mean()
+
+    # Organizing results into DataFrame
     results_per_model = pd.DataFrame(data=dict(mean_cv_score=cv_scores_mean,
                                                model=pipe,
                                                repeat=["Repeat " + str(i) for i in range(1, 6)]))
+
+    # Concatenating results
     results = pd.concat([results, results_per_model])
 
-
-# They all look very simplier on Iris dataset
-# Maybe do a different classification dataset even
-sns.boxplot(data=results, x='model', y='mean_cv_score')
-
-
-
-
+# Plotting results as boxplot, just for demonstration purposes
+(sns
+ .boxplot(data=results, x="model", y="mean_cv_score")
+ .set(title='Model Comparison',
+      xlabel="Model",
+      ylabel="Mean Cross-Validation Score \n (Repeated Stratified k-Fold)"))
 
 
 
@@ -225,65 +226,35 @@ sns.boxplot(data=results, x='model', y='mean_cv_score')
 
 
 
-results.
-
-import matplotlib.pyplot as plt
-
-fig = plt.figure()
-fig.suptitle('Algorithm Comparison')
-ax = fig.add_subplot(111)
-plt.boxplot(results[0:1,])
-ax.set_xticklabels(model_name)
-plt.show()
 
 
 
-from sklearn.model_selection import KFold
-
-model_name = []
-results = []
-for pipe, model in pipelines:
-    # probably move kfold
-    kfold = KFold(n_splits=5, random_state=42)
-    crossv_results = cross_val_score(model, X_train, y_train, cv=kfold)
-    results.append(crossv_results)
-    model_name.append(pipe)
-    # change below to an fstring
-    msg = "%s: %f (%f)" % (model_name, crossv_results.mean(), crossv_results.std())
-    print(msg)
-
-    # do this to make boxplot
 
 
-for pipe, model in pipelines:
-    print(pipe)
-    print(model)
-    kfold = KFold(n_splits=5)
-    crossv_results = cross_val_score(model, X_train, y_train, cv=cv)
-    results.append(crossv_results)
-    model_name.append(pipe)
-    # change below to an fstring
-    msg = "%s: %f (%f)" % (model_name, crossv_results.mean(), crossv_results.std())
-    print(msg)
-
-cross_val_score(lda, X, y, cv=5)
 
 
+
+
+
+
+poly = PolynomialFeatures(degree=2, interaction_only=False)
+X_poly = poly.fit_transform(X_train)
+log_reg = LogisticRegression(penalty="none")
+log_reg.fit(X_poly, y_train)
+log_reg.score(poly.transform(X_test), y_test)
+
+# This works
+from sklearn.preprocessing import StandardScaler
+pipe = Pipeline([
+    ("standard_scaler", StandardScaler()),
+    ("polynomial_features", PolynomialFeatures()),
+    ("logistic_regression", LogisticRegression(penalty="none"))
+])
 #
-# # poly = PolynomialFeatures(degree=2, interaction_only=False)
-# # X_poly = poly.fit_transform(X_train)
-# # log_reg = LogisticRegression(penalty="none")
-# # log_reg.fit(X_poly, y_train)
-# # log_reg.score(poly.transform(X_test), y_test)
-#
-# # This works
-# pipe = Pipeline([
-#     ("polynomial_features", PolynomialFeatures()),
-#     ("logistic_regression", LogisticRegression(penalty="none"))
-# ])
-#
-# pipe.fit(X_train, y_train)
-# pipe.score(X_test, y_test)
+pipe.fit(X_train, y_train)
+pipe.score(X_test, y_test)
+
+cross_val_score(pipe, X, y, cv=cv)
 #
 #
 # lr = LogisticRegression()
