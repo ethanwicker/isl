@@ -1,5 +1,8 @@
 # Note: Do a quadratic logistic regression in this post
 
+# Note for future: I think I like the idea of making myself a notes section with useful code snippets
+# Maybe even call it that: "useful code snippets" Nah but notes if more general
+
 # Plan:
 # Do a simple validation set
 # Then a LOOCV example
@@ -169,19 +172,130 @@ X_poly.shape
 # # Creating pipeline
 # pipeline = Pipeline([step_simple_imputer, step_encoder])
 
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import PolynomialFeatures
+
 from sklearn.pipeline import Pipeline
-pipelines = list()
+
 pipeline_lda = ("lda", (Pipeline([("lda", LinearDiscriminantAnalysis())])))
 pipeline_qda = ("qda", Pipeline([("qda", QuadraticDiscriminantAnalysis())]))
-pipeline_log_reg = ("log_reg", Pipeline([("log_reg", LogisticRegression())]))
-pipeline_quadratic_log_reg = ("quadratic_log_reg",
-                              Pipeline([
-                                  # insert polynomial features stuff here
-                                  # then fit
-                                  # do this outside the pipeline first, then put it in here
-                                  ("log_reg", LogisticRegression()),
+pipeline_log_reg = ("log_reg", Pipeline([("log_reg", LogisticRegression(penalty="none"))]))
+pipeline_quadratic_log_reg = \
+    ("quadratic_log_reg", Pipeline([
+        ("polynomial_features", PolynomialFeatures()),
+        ("logistic_regression", LogisticRegression(penalty="none"))
+    ]))
 
-                              ]))
+pipelines = [
+    pipeline_lda,
+    pipeline_qda,
+    pipeline_log_reg,
+    pipeline_quadratic_log_reg
+]
+
+cross_val_score(LogisticRegression(penalty="none"), X, y, cv=cv)
+
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=5, random_state=1234)
+
+results = pd.DataFrame()
+
+for pipe, model in pipelines:
+    print(pipe)
+    print(model)
+    cv_scores = cross_val_score(LogisticRegression(penalty="none"), X, y, cv=cv)
+    cv_scores_mean = pd.DataFrame(data=cv_scores.reshape(10, 5)).mean()
+    results_per_model = pd.DataFrame(data=dict(mean_cv_score=cv_scores_mean,
+                                               model=pipe,
+                                               repeat=["Repeat " + str(i) for i in range(1, 6)]))
+    results = pd.concat([results, results_per_model])
+
+
+# They all look very simplier on Iris dataset
+# Maybe do a different classification dataset even
+sns.boxplot(data=results, x='model', y='mean_cv_score')
+
+
+
+
+
+
+
+
+
+
+
+results.
+
+import matplotlib.pyplot as plt
+
+fig = plt.figure()
+fig.suptitle('Algorithm Comparison')
+ax = fig.add_subplot(111)
+plt.boxplot(results[0:1,])
+ax.set_xticklabels(model_name)
+plt.show()
+
+
+
+from sklearn.model_selection import KFold
+
+model_name = []
+results = []
+for pipe, model in pipelines:
+    # probably move kfold
+    kfold = KFold(n_splits=5, random_state=42)
+    crossv_results = cross_val_score(model, X_train, y_train, cv=kfold)
+    results.append(crossv_results)
+    model_name.append(pipe)
+    # change below to an fstring
+    msg = "%s: %f (%f)" % (model_name, crossv_results.mean(), crossv_results.std())
+    print(msg)
+
+    # do this to make boxplot
+
+
+for pipe, model in pipelines:
+    print(pipe)
+    print(model)
+    kfold = KFold(n_splits=5)
+    crossv_results = cross_val_score(model, X_train, y_train, cv=cv)
+    results.append(crossv_results)
+    model_name.append(pipe)
+    # change below to an fstring
+    msg = "%s: %f (%f)" % (model_name, crossv_results.mean(), crossv_results.std())
+    print(msg)
+
+cross_val_score(lda, X, y, cv=5)
+
+
+#
+# # poly = PolynomialFeatures(degree=2, interaction_only=False)
+# # X_poly = poly.fit_transform(X_train)
+# # log_reg = LogisticRegression(penalty="none")
+# # log_reg.fit(X_poly, y_train)
+# # log_reg.score(poly.transform(X_test), y_test)
+#
+# # This works
+# pipe = Pipeline([
+#     ("polynomial_features", PolynomialFeatures()),
+#     ("logistic_regression", LogisticRegression(penalty="none"))
+# ])
+#
+# pipe.fit(X_train, y_train)
+# pipe.score(X_test, y_test)
+#
+#
+# lr = LogisticRegression()
+# lr.fit(X_poly, y_train)
+#
+# lr.score(poly.transform(X_test), y_test)
+
+# pipe = Pipeline([('polynomial_features', poly), ('logistic_regression', lr)])
+# pipe.fit(X_train, y_train)
+# pipe.score(X_test, y_test)
+
+
 
 # this is what i want
 # It's a list of pipelines that is then iterated through
