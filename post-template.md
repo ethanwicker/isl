@@ -7,7 +7,7 @@ comments: false
 
 ### Big Header
 
-### Small Header
+#### Small Header
 
 The structure of this post was influenced by the third chapter of *An Introduction to Statistical Learning: with Applications in R* by Gareth James, Daniela Witten, Trevor Hastie, and Robert Tibshirani.
 
