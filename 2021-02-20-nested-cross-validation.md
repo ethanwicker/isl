@@ -23,20 +23,7 @@ $$
 
 ### Start Here
 
-* Explain what cross validation is
-* In a previous post, I introduced much of the theory behind CV
-* In this post, I'll explore some working example using CV from scikit-learn
-* In particular, I'll explore simple validation sets using train_test_split, `KFold` CV, `LeaveOneOut`, `StratifiedKFold` CV,
-* GroupKFold         # will just discuss this, won't actually do it
-* TimeSeriesSplit    # will just discuss this, won't actually do it
-
-[In a previous post](https://ethanwicker.com/2021-02-15-cross-validation-001/) I introduced the concept of cross-validation as a resampling technique.  In particular, cross-validation is useful to esimate the *test error* of a particular model fit in order to evaluate its performance, or to decide on an optimal level of flexibility.
-
-
-can also be used for cross validation
-
-* copy and pasted below
-In this ideal situation, we would split the data into training, validation, and test sets, then fit candidate models on the training set, evaluate and select them on the validation set, and report the performance of the final model on the test set.
+Miscellaneous notes below:
 
 cross validation useful to evaluate the performance of a model on a dataset --> how well is my model doing
 nested cross validation used to turn parameters of an algorithm and evaludate the perform of the model - let's pick the value of C and evaluate how well the model is doing
