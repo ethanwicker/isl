@@ -19,10 +19,11 @@ from sklearn.datasets import load_iris
 # Loading Iris as pandas DataFrame
 iris = load_iris(as_frame=True)
 
-# Creating target_names DataFrame to match up target with target_name
-iris_target_names = pd.DataFrame(data=dict(target=[0, 1, 2], target_name=iris.target_names))
+# Creating DataFrame to match up target label with target_name
+iris_target_names = pd.DataFrame(data=dict(target=[0, 1, 2],
+                                           target_name=iris.target_names))
 
-# Merging
+# Merging predictor and response DataFrames, via left join
 data = (iris["frame"]
         .merge(right=iris_target_names,
                on="target",
@@ -59,10 +60,10 @@ X_train, X_test, y_train, y_test = train_test_split(X, y,
 lda = LinearDiscriminantAnalysis()
 lda.fit(X=X_train, y=y_train)
 
-lda.predict(X_train)  # training predictions
-lda.predict(X_test)   # training predictions
-lda.score(X=X_train, y=y_train)  # training error rate
-lda.score(X=X_test, y=y_test)    # test error rate
+lda.predict(X_train)  # predictions on training set
+lda.predict(X_test)   # predictions on test set
+lda.score(X=X_train, y=y_train)  # correct classification rate on training set
+lda.score(X=X_test, y=y_test)    # correct classification rate on test set
 
 ####
 # KFold/really Stratified KFold
@@ -75,10 +76,31 @@ from sklearn.model_selection import cross_val_score
 # StratifiedKFold is used if estimator is a classifier
 # Performing stratified k-Fold CV here --> keeping class labels roughly same in each fold
 # Comment: Above had to use _train and _test sets, but with k-Fold can use entirety of X and y
-scores = cross_val_score(lda, X, y, cv=10)
-scores # view the scores
+scores = cross_val_score(estimator=lda, X=X, y=y, cv=10)
+scores  # view the scores
 scores.mean()
 scores.std()
+
+# Using StratifiedKFold class explicitly
+from sklearn.model_selection import StratifiedKFold
+
+cv_stratified_k_fold = StratifiedKFold(n_splits=10, shuffle=False)
+cross_val_score(estimator=lda, X=X, y=y, cv=cv_stratified_k_fold)
+
+# cross_validate
+
+from sklearn.model_selection import cross_validate
+
+scores = cross_validate(estimator=lda,
+                        X=X,
+                        y=y,
+                        cv=10,
+                        scoring=("roc_auc_ovo", "accuracy"),
+                        return_train_score=True)
+
+from pprint import pprint
+pprint(scores)
+
 
 ####
 # "Comments on Repeated Cross-Validation"
@@ -98,7 +120,9 @@ scores.std()
 # Look at above notes. Will show this code because it's interesting, but not useful in practice.
 # Wanted to give the code a try just to figure out
 from sklearn.model_selection import RepeatedStratifiedKFold
-cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=5, random_state=1234)
+cv_repeated_stratified_k_fold = RepeatedStratifiedKFold(n_splits=10,
+                                                        n_repeats=5,
+                                                        random_state=1234)
 scores = cross_val_score(lda, X, y, cv=cv)
 scores
 scores.mean()
@@ -155,7 +179,7 @@ results = pd.DataFrame()
 for pipe, model in pipelines:
 
     # Getting cross validation scores
-    cv_scores = cross_val_score(model, X, y, cv=cv)
+    cv_scores = cross_val_score(model, X, y, cv=cv_repeated_stratified_k_fold)
 
     # Calculating mean CV scores (approximation for mu_1 in paper's notation)
     cv_scores_mean = pd.DataFrame(data=cv_scores.reshape(10, 5)).mean()
@@ -181,7 +205,6 @@ for pipe, model in pipelines:
 ####
 
 from sklearn.model_selection import LeaveOneOut
-cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=5, random_state=1234)
 cv = LeaveOneOut()
 scores = cross_val_score(lda, X, y, cv=cv)
 scores.mean()
