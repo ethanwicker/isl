@@ -1,49 +1,3 @@
-import pandas as pd
-
-from sklearn.datasets import load_boston
-from sklearn.linear_model import LinearRegression
-from sklearn.utils import resample
-
-boston = load_boston()
-
-X = (pd.DataFrame(boston.data, columns=boston.feature_names)
-     .loc[:, ["RM", "AGE"]]
-     .rename(columns=dict(RM="mean_rooms_per_dwelling",
-                          AGE="prop_built_prior_1940")))
-
-y = pd.DataFrame(boston.target, columns=["median_value"])
-
-data = pd.concat(objs=[X, y], axis=1)
-
-train = resample(data, replace=True, n_samples=len(data))   # change 5 here to len(data)
-test = data[~data.index.isin(train.index)]
-
-lin_reg = LinearRegression()
-
-X_train = train.loc[:, ["mean_rooms_per_dwelling", "prop_built_prior_1940"]]
-y_train = train.loc[:, ["median_value"]]
-
-X_test = test.loc[:, ["mean_rooms_per_dwelling", "prop_built_prior_1940"]]
-y_test = test.loc[:, ["median_value"]]
-
-lin_reg.fit(X_train, y_train)
-
-# Loop through all these and collect 1000 times
-# Then do something similar for a different type of model
-# Maybe lasso reg with C = 0.1 and the score to drive home point that can be done with any type of model
-lin_reg.coef_
-lin_reg.intercept_
-lin_reg.score(X_test, y_test)
-
-intercept = lin_reg.intercept_
-beta_x1 = lin_reg.coef_.ravel()[0]
-beta_x2 = lin_reg.coef_.ravel()[1]
-r2 = lin_reg.score(X_test, y_test)
-
-stats = pd.DataFrame(data=dict(intercept=intercept,
-                               beta_x1=beta_x1,
-                               beta_x2=beta_x2,
-                               r2=r2))
 ## Writing for loop below
 ## CLEAN UP THIS LOOP SOME MORE
 # delete code above
@@ -54,14 +8,40 @@ stats = pd.DataFrame(data=dict(intercept=intercept,
 # then write up supporting post
 
 
+import pandas as pd
+
+from sklearn.datasets import load_boston
+from sklearn.linear_model import LinearRegression
+from sklearn.utils import resample
+
+# Loading boston dataset
+boston = load_boston()
+
+# Selecting just two fields and renaming
+X = (pd.DataFrame(boston.data, columns=boston.feature_names)
+     .loc[:, ["RM", "AGE"]]
+     .rename(columns=dict(RM="mean_rooms_per_dwelling",
+                          AGE="prop_built_prior_1940")))
+
+y = pd.DataFrame(boston.target, columns=["median_value"])
+
+data = pd.concat(objs=[X, y], axis=1)
+
+# Defining number of iterations for bootstrap resample
 n_iterations = 1000
+
+# Initializing estimator
 lin_reg = LinearRegression()
 
-# Initialzing stats
+# Initialzing stats DataFrame, to hold bootstrapped stats
 stats = pd.DataFrame()
 
+# Each loop iteration is a single bootstrap resample and model fit
 for i in range(n_iterations):
-    train = resample(data, replace=True, n_samples=len(data))  # change 5 here to len(data)
+
+    # Sampling n_samples from data, with replacement, as train
+    # Defining test to be all observations not in train
+    train = resample(data, replace=True, n_samples=len(data))
     test = data[~data.index.isin(train.index)]
 
     X_train = train.loc[:, ["mean_rooms_per_dwelling", "prop_built_prior_1940"]]
@@ -70,19 +50,53 @@ for i in range(n_iterations):
     X_test = test.loc[:, ["mean_rooms_per_dwelling", "prop_built_prior_1940"]]
     y_test = test.loc[:, ["median_value"]]
 
+    # Fitting linear regression model
     lin_reg.fit(X_train, y_train)
 
+    # Storing stats in DataFrame, and concatenating with stats
     intercept = lin_reg.intercept_
-    beta_x1 = lin_reg.coef_.ravel()[0]
-    beta_x2 = lin_reg.coef_.ravel()[1]
-    r2 = lin_reg.score(X_test, y_test)
+    beta_mean_rooms_per_dwelling = lin_reg.coef_.ravel()[0]
+    beta_prop_built_prior_1940 = lin_reg.coef_.ravel()[1]
+    r_squared = lin_reg.score(X_test, y_test)
 
     stats_i = pd.DataFrame(data=dict(intercept=intercept,
-                                     beta_x1=beta_x1,
-                                     beta_x2=beta_x2,
-                                     r2=r2))
+                                     beta_mean_rooms_per_dwelling=beta_mean_rooms_per_dwelling,
+                                     beta_prop_built_prior_1940=beta_prop_built_prior_1940,
+                                     r_squared=r_squared))
 
     stats = pd.concat(objs=[stats, stats_i])
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# plot
+fig, axes = plt.subplots(2, 2, figsize=(7, 7))
+sns.histplot(stats.intercept, color="skyblue", ax=axes[0, 0], kde=True)
+sns.histplot(stats.beta_mean_rooms_per_dwelling, color="olive", ax=axes[0, 1], kde=True)
+sns.histplot(stats.beta_prop_built_prior_1940, color="gold", ax=axes[1, 0], kde=True)
+sns.histplot(stats.r_squared, color="teal", ax=axes[1, 1], kde=True)
+
+from scipy.stats import sem
+sem(stats.intercept)
+sem(stats.beta_mean_rooms_per_dwelling)
+sem(stats.beta_prop_built_prior_1940)
+sem(stats.r_squared)
+
+scipy.stats.norm.interval
+
+from scipy.stats import norm
+import numpy as np
+
+norm.interval(alpha=0.95, loc=np.mean(stats.intercept), scale=sem(stats.intercept))
+
+# I THINK THE ABOVE IS WRONG:
+# compare and contrast with this: stats.intercept.describe()
+# Stuff does not seem to be adding up
+# There has to be an easier way to do this, probably via scipy.stats
+# Think through exactly what I want, and maybe manually calculate it as a santity check
+
+
+
 
 
 
