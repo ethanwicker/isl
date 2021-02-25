@@ -31,47 +31,18 @@ Sample Size
 In machine learning, it is common to use a sample size that is the same as the original dataset.
 If the dataset is enormous and computational efficiency is an issue, smaller samples can be used, such as 50% or 80% of the size of the dataset.
 
-Compare boostrap results to those obtained via statsmodels, like in book
+Notes on standard deviation vs. standard error
+KEY TAKEAWAYS
+The T distribution is a continuous probability distribution of the z-score when the estimated standard deviation is used in the denominator rather than the true standard deviation.
+The T distribution, like the normal distribution, is bell-shaped and symmetric, but it has heavier tails, which means it tends to produce values that fall far from its mean.
+T-tests are used in statistics to estimate significance.
+I really want the standard deviation here because I already have my distribution
+The standard deviation (often SD) is a measure of variability. When we calculate the standard deviation of a sample, we are using it as an estimate of the variability of the population from which the sample was drawn. For data with a normal distribution,2 about 95% of individuals will have values within 2 standard deviations of the mean, the other 5% being equally scattered above and below these limits.
+When we calculate the sample mean we are usually interested not in the mean of this particular sample, but in the mean for individuals of this type—in statistical terms, of the population from which the sample comes. We usually collect data in order to generalise from them and so use the sample mean as an estimate of the mean for the whole population. Now the sample mean will vary from sample to sample; the way this variation occurs is described by the “sampling distribution” of the mean.
+So, if we want to say how widely scattered some measurements are, we use the standard deviation. If we want to indicate the uncertainty around the estimate of the mean measurement, we quote the standard error of the mean.
+Because I already have my distribution, I'm interested in the standard deviation here
+If instead, I was interested in how the mean of my estimates would vary across many bootstrap resampling procedures, I would want the standard error
 
-From https://machinelearningmastery.com/calculate-bootstrap-confidence-intervals-machine-learning-results-python/
-```python
-import numpy
-from pandas import read_csv
-from sklearn.utils import resample
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score
-from matplotlib import pyplot
-# load dataset
-data = read_csv('pima-indians-diabetes.data.csv', header=None)
-values = data.values
-# configure bootstrap
-n_iterations = 1000
-n_size = int(len(data) * 0.50)
-# run bootstrap
-stats = list()
-for i in range(n_iterations):
-	# prepare train and test sets
-	train = resample(values, n_samples=n_size)
-	test = numpy.array([x for x in values if x.tolist() not in train.tolist()])
-	# fit model
-	model = DecisionTreeClassifier()
-	model.fit(train[:,:-1], train[:,-1])
-	# evaluate model
-	predictions = model.predict(test[:,:-1])
-	score = accuracy_score(test[:,-1], predictions)
-	print(score)
-	stats.append(score)
-# plot scores
-pyplot.hist(stats)
-pyplot.show()
-# confidence intervals
-alpha = 0.95
-p = ((1.0-alpha)/2.0) * 100
-lower = max(0.0, numpy.percentile(stats, p))
-p = (alpha+((1.0-alpha)/2.0)) * 100
-upper = min(1.0, numpy.percentile(stats, p))
-print('%.1f confidence interval %.1f%% and %.1f%%' % (alpha*100, lower*100, upper*100))
-```
 
 To do the above to look at the distribution of a coef, we would just need to capture that coef value each time in a list and plot it
 and then get CIs and such

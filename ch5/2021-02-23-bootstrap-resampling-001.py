@@ -7,7 +7,6 @@
 # and only do the SE and CI and plot for r2
 # then write up supporting post
 
-
 import pandas as pd
 
 from sklearn.datasets import load_boston
@@ -34,7 +33,7 @@ n_iterations = 1000
 lin_reg = LinearRegression()
 
 # Initialzing stats DataFrame, to hold bootstrapped stats
-stats = pd.DataFrame()
+bootstrapped_stats = pd.DataFrame()
 
 # Each loop iteration is a single bootstrap resample and model fit
 for i in range(n_iterations):
@@ -59,92 +58,53 @@ for i in range(n_iterations):
     beta_prop_built_prior_1940 = lin_reg.coef_.ravel()[1]
     r_squared = lin_reg.score(X_test, y_test)
 
-    stats_i = pd.DataFrame(data=dict(intercept=intercept,
-                                     beta_mean_rooms_per_dwelling=beta_mean_rooms_per_dwelling,
-                                     beta_prop_built_prior_1940=beta_prop_built_prior_1940,
-                                     r_squared=r_squared))
+    bootstrapped_stats_i = pd.DataFrame(data=dict(
+        intercept=intercept,
+        beta_mean_rooms_per_dwelling=beta_mean_rooms_per_dwelling,
+        beta_prop_built_prior_1940=beta_prop_built_prior_1940,
+        r_squared=r_squared
+    ))
 
-    stats = pd.concat(objs=[stats, stats_i])
+    bootstrapped_stats = pd.concat(objs=[bootstrapped_stats,
+                                         bootstrapped_stats_i])
 
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 # plot
 fig, axes = plt.subplots(2, 2, figsize=(7, 7))
-sns.histplot(stats.intercept, color="skyblue", ax=axes[0, 0], kde=True)
-sns.histplot(stats.beta_mean_rooms_per_dwelling, color="olive", ax=axes[0, 1], kde=True)
-sns.histplot(stats.beta_prop_built_prior_1940, color="gold", ax=axes[1, 0], kde=True)
-sns.histplot(stats.r_squared, color="teal", ax=axes[1, 1], kde=True)
+sns.histplot(bootstrapped_stats.intercept, color="skyblue", ax=axes[0, 0], kde=True)
+sns.histplot(bootstrapped_stats.beta_mean_rooms_per_dwelling, color="olive", ax=axes[0, 1], kde=True)
+sns.histplot(bootstrapped_stats.beta_prop_built_prior_1940, color="gold", ax=axes[1, 0], kde=True)
+sns.histplot(bootstrapped_stats.r_squared, color="teal", ax=axes[1, 1], kde=True)
 
-from scipy.stats import sem
-sem(stats.intercept)
-sem(stats.beta_mean_rooms_per_dwelling)
-sem(stats.beta_prop_built_prior_1940)
-sem(stats.r_squared)
+# Getting standard deviation of measurements
+# Maybe just show one
+import scipy.stats as st
+st.tstd(bootstrapped_stats.intercept)
+st.tstd(bootstrapped_stats.beta_mean_rooms_per_dwelling)
+st.tstd(bootstrapped_stats.beta_prop_built_prior_1940)
+st.tstd(bootstrapped_stats.r_squared)
 
-scipy.stats.norm.interval
 
-from scipy.stats import norm
+
+
+
+# Getting confidence intervals
+# This are the same, tstd="trimmed standard deviation", note ddof=1 by default in st.tstd
 import numpy as np
+np.std(bootstrapped_stats.intercept, ddof=1)
+st.tstd(bootstrapped_stats.intercept)
 
-norm.interval(alpha=0.95, loc=np.mean(stats.intercept), scale=sem(stats.intercept))
+# Using normal here because 1000 samples, would use t-distribution for smaller sample size (but CLT)
+# Just show one here (do beta_mean_rooms_per_dwelling)
+# And then just for that one, show it the CI on the plot
+# Then do the lasso regularization stuff
+norm.interval(alpha=0.95, loc=np.mean(bootstrapped_stats.intercept), scale=st.tstd(bootstrapped_stats.intercept))
 
-# I THINK THE ABOVE IS WRONG:
-# compare and contrast with this: stats.intercept.describe()
-# Stuff does not seem to be adding up
-# There has to be an easier way to do this, probably via scipy.stats
-# Think through exactly what I want, and maybe manually calculate it as a santity check
-
-
-
-
-
-
-
+# Sanity check
+plt.axvline(x=-34.07275877662597, ax=axes[0, 0])
+axes[0, 0].axvline(x=-34.07275877662597, color="red")
+axes[0, 0].axvline(x=-16.60852219208411, color="red")
 
 
-
-
-
-
-
-
-
-# DELETE BELOW
-
-import numpy
-from pandas import read_csv
-from sklearn.utils import resample
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score
-from matplotlib import pyplot
-# load dataset
-data = read_csv('pima-indians-diabetes.data.csv', header=None)
-values = data.values
-# configure bootstrap
-n_iterations = 1000
-n_size = int(len(data) * 0.50)
-# run bootstrap
-stats = list()
-for i in range(n_iterations):
-	# prepare train and test sets
-	train = resample(values, n_samples=n_size)
-	test = numpy.array([x for x in values if x.tolist() not in train.tolist()])
-	# fit model
-	model = DecisionTreeClassifier()
-	model.fit(train[:,:-1], train[:,-1])
-	# evaluate model
-	predictions = model.predict(test[:,:-1])
-	score = accuracy_score(test[:,-1], predictions)
-	print(score)
-	stats.append(score)
-# plot scores
-pyplot.hist(stats)
-pyplot.show()
-# confidence intervals
-alpha = 0.95
-p = ((1.0-alpha)/2.0) * 100
-lower = max(0.0, numpy.percentile(stats, p))
-p = (alpha+((1.0-alpha)/2.0)) * 100
-upper = min(1.0, numpy.percentile(stats, p))
-print('%.1f confidence interval %.1f%% and %.1f%%' % (alpha*100, lower*100, upper*100))
