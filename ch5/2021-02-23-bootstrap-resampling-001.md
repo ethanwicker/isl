@@ -47,46 +47,14 @@ If instead, I was interested in how the mean of my estimates would vary across m
 To do the above to look at the distribution of a coef, we would just need to capture that coef value each time in a list and plot it
 and then get CIs and such
 
-This might also be useful
-```python
-# I think the below does want I want it to?
-# Not sure, need to verify
-# This is bagging aggregation
-# Include just to show how the different models all look
-# With bootstrapping we are estimating the CIs of (in this case) beta_0 and beta_1
-# Actual bagging will come in a later post, but show the last line of this just to demonstrating boostrap aggregation for regression prediction
-
-# If you want to use scikit's API for the bootstrap part of the code:
-
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import BaggingRegressor
-
-# Create toy data 
-x = np.linspace(0, 10, 20)
-y = x + (np.random.rand(len(x)) * 10)
-
-# Extend x data to contain another row vector of 1s
-X = np.vstack([x, np.ones(len(x))]).T
-
-n_estimators = 50
-model = BaggingRegressor(LinearRegression(), 
-                         n_estimators=n_estimators,
-                         bootstrap=True)
-
-model.fit(X, y)
-
-plt.figure(figsize=(12,8))
-
-# Accessing each base_estimator (already fitted)
-for m in model.estimators_:
-    plt.plot(x, m.predict(X), color='grey', alpha=0.2, zorder=1)
-
-plt.scatter(x,y, marker='o', color='orange', zorder=4)
-
-# "Bagging model" prediction
-plt.plot(x, model.predict(X), color='red', zorder=5)
-```
-
 ### Start Here
+
+The *bootstrap* is a widely used resampling technique first introduced by Bradley Efron in 1979 commonly used to quantify the uncertainty associated with a given estimator or statistical learning method.  The bootstrap can be applied to many problems and methods, and is commonly used to estimate the standard errors of the coefficients estimated from regression model fits, or the distribution of $R^2$ values from those fits.
+
+Via bootstrap aggregation, we can estimate the uncertainty - or variability - associated with a given method by taking repeated samples from a dataset with replacement and applying the method.  For example, to estimate the uncertainly of a coefficient estimate $\hat{\beta_1}$ from a linear regression fit, we take $n$ repeated samples with replacement from our dataset and train our linear regression model $n$ times and record each value $\hat{\beta}_1^{*i}$.  With enough sampling, the distribution of all estimates $\hat{\beta}_1^{*i}$ will approach the Gaussian distribution, and thus we can quantify the variability of this estimate by calculating standard errors and confidence intervals.
+
+The power of the bootstrap lies in the ability to take repeated samples of the dataset, instead of collecting a new dataset each time.  Also, in contrast to standard error estimates typically reported with statistical software that rely on algebraic methods and underlying assumptions, bootstrapped standard error estimates are more accurate as they are calculated computationally.  For example, the common standard error estimate for a linear regression fit is dependent upon an unknown parameter $\sigma_2$ that is estimated using the residual sum of squares values.  Bootstrapped standard error estimates do not rely on these assumptions and unknown parameters, so it likely to produce more accurate results.
+
+### Calculating Bootstrapped Estimates using scikit-learn's `resample`
+
+START HERE TOMORROW
