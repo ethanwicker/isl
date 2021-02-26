@@ -1,11 +1,3 @@
-## Writing for loop below
-## CLEAN UP THIS LOOP SOME MORE
-# delete code above
-# next steps: take results, plot, get SE and CI
-# do for the lasso C = 0.01 model, just for demo purposes
-# but keep all features (cause regression)
-# and only do the SE and CI and plot for r2
-# then write up supporting post
 
 import pandas as pd
 
@@ -71,7 +63,7 @@ for i in range(n_iterations):
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# plot
+# Plotting histograms
 fig, axes = plt.subplots(2, 2, figsize=(7, 7))
 sns.histplot(bootstrapped_stats["intercept"], color="royalblue", ax=axes[0, 0], kde=True)
 sns.histplot(bootstrapped_stats["beta_mean_rooms_per_dwelling"], color="olive", ax=axes[0, 1], kde=True)
@@ -159,10 +151,48 @@ for i in range(n_iterations):
 
 # If you want to use scikit's API for the bootstrap part of the code:
 
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import BaggingRegressor
+
+X = data[["prop_built_prior_1940"]]
+y = data[["median_value"]]
+
+n_estimators = 50
+
+# Initializing estimator
+model = BaggingRegressor(LinearRegression(),
+                         n_estimators=n_estimators,
+                         bootstrap=True)
+
+# Fitting 50 bootstrapped models
+model.fit(X, y)
+
+plt.figure(figsize=(12, 8))
+
+# Plotting each model
+for m in model.estimators_:
+    plt.plot(X, m.predict(X), color='grey', alpha=0.2, zorder=1)
+
+# Plotting data
+plt.scatter(X, y, color="orange")
+
+# Bagged model prediction
+plt.plot(X, model.predict(X), color='red')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Create toy data
 x = np.linspace(0, 10, 20)
