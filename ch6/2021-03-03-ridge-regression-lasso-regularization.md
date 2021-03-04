@@ -48,7 +48,7 @@ RSS = \sum_{i=1}^{n} (y_i - \hat{\beta_0} - \sum_{j=1}^{p} \beta_j x_{ij})^2.
 \end{aligned}
 $$
 
-In contrast, ridge regression estimates the coefficients by minimizing a similar, but different quantity.  In particular, the ridge regression coefficient estiamtes $\hat{\beta}^R are the values that minimize 
+In contrast, ridge regression estimates the coefficients by minimizing a similar, but different quantity.  In particular, the ridge regression coefficient estimates $\hat{\beta}^R are the values that minimize 
 
 $$
 \begin{aligned} 
@@ -58,7 +58,20 @@ $$
 
 where $\lambda \gte 0$ is a *tuning parameter* commonly selected using cross-validation.  The second term $\lambda \sum_{j=1}^{p} \beta_j^2$ is known as a *shrinkage penalty* and has the effect of shrinking the estimates $\hat{\beta_0}, \hat{\beta_1}, ... \hat{\beta_p}$ towards zero.  When $\lambda = 0$, penalty term has no effect and ridge regression will produce the same coefficient estimates as the least squares estimates.  However, as $\lambda \to \inf$, the ridge regression coefficient estimates will approach zero. 
 
-Ridge regression is known as Tikhonov regularization (and less commonly Tikhonov–Phillips regularization) outside the statistical literature, after the Russian and Soviet mathematician and geophysicist Andrey Nikolayevich Tikhonov.
+Outside the statistical literature, ridge regression is known as Tikhonov regularization (and less commonly Tikhonov–Phillips regularization), after the Russian and Soviet mathematician and geophysicist Andrey Nikolayevich Tikhonov.
+
+| ![2021-03-03-ridge-regression-lasso-regularization-001-fig-1.png](/assets/img/2021-03-03-ridge-regression-lasso-regularization-001-fig-1.png){: .mx-auto.d-block :} |
+| :--: |
+| <sub><sup>**Sour
+
+The figure above shows ridge regression performed on the Credit data set (available via the ISLR R package).  The left plot shows the standardized coefficients as a function of $\lambda$, while the right plot shows the same coefficients as a function of $\| \hat{\beta_{\lambda}^R \|_2 / \| \hat{}\beta \|_2}$.  Here, \| \beta \|_2 = \sqrt{\sum_{j=1}^{p} \beta_j^2} is the $l_2 norm$ and measures the distance of $\beta$ from zero.  From the image, we can see that the `Income`, `Limit`, `Rating` and `Student` variable approach zero as  $\lambda$ increases, while the other variables (dulled out in gray) maintain values near zero for any value of $\lambda$.
+
+Note that ridge regression is influenced by the scale of the predictor variables.  As such, it is best to apply ridge regression after all predictor variables have been scaled such that they each have a mean of zero and a standard deviation of 1.  We do not have to also standardize the response variable when standardizing the predictor variables, but it does no harm.
+
+
+
+\| x\| 
+
 
 Next:
 - Comment: Must standardize variables
