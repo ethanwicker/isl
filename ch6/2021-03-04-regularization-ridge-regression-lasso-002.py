@@ -1,5 +1,3 @@
-# This blog has a great example of making the plot:
-# https://towardsdatascience.com/ridge-regression-for-better-usage-2f19b3a202db
 # show the comparison to statsmodels https://www.statsmodels.org/dev/generated/statsmodels.regression.linear_model.OLS.fit_regularized.html
 
 # Boston housing data
@@ -13,18 +11,15 @@
 # Run a grid search with standardizing in a pipeline
 # Fit the best model using _best_params and get MSE
 # Plot the graph showing the coefficients for different values of C (will need to run a for loop)
-# Instead of plotting the graph as in the above medium link, I can probably use cross_val_score or a grid search param to get the stored coef values for each alpha, (RidgeCV with array of alphas)
 # Also use RidgeCV which defaults to LOOCV (can set cv=10 to perform 10-fold CV)
 # Show the comparison to statsmodels
 
 # Repeat the above grid search with Lasso
-# Fit the best model using _best_params and get MSE and copare to Ridge
+# Fit the best model using _best_params and get MSE and compare to Ridge
 
 # Show Lasso fitting with statsmodels and comment on how to do ridge regression
 
 # Make sure to look at Ridge and Lasso documentation for defaults, etc
-
-# Question: What are RidgeCV and LassoCV?
 
 # =====================================
 # =====================================
@@ -58,7 +53,7 @@ X = standard_scaler.fit_transform(X)
 # Ridge
 # =====================================
 
-# Initialzing Ridge estimator, defining lambda (alpha) to be 0.1
+# Initializing Ridge estimator, defining lambda (alpha) to be 0.1
 ridge_reg = Ridge(alpha=0.1)
 
 # Fitting estimator
@@ -85,7 +80,7 @@ cv_scores.mean()
 cv_scores.std()
 
 # =====================================
-# GridSearchCV
+# GridSearchCV (with Ridge)
 # =====================================
 
 from sklearn.model_selection import GridSearchCV
@@ -137,84 +132,61 @@ ridge_reg_cv.intercept_   # intercept when alpha=100
 # Plotting Standardized Coefficients as Function of lambda
 # =====================================
 
+import seaborn as sns
 
-# Defining grid of candidate alpha values (powers of 10, from 0.00001 to 1000000)
-param_grid = {"alpha": 10.0 ** np.arange(-5, 6)}
+# Defining alpha (lambda) values (powers of 10, from 0.00001 to 1000000)
+alphas = np.arange(-5, 6)
 
+# Initiating lit to hold results
 coefficients_list = []
 
-for alpha in 10.0 ** np.arange(-5, 6):
+# For each value of alpha, performing ridge regression and storing coefficients
+for alpha in 10.0 ** alphas:
     ridge_reg = Ridge(alpha=alpha)
     ridge_reg.fit(X, y)
     coefficients_df = pd.DataFrame(ridge_reg.coef_).T
     coefficients_list.append(coefficients_df)
 
+# Organizing coefficients DataFrame for plotting
 coefficients = \
     (pd.concat(coefficients_list)
      .rename(columns=pd.Series(load_boston().feature_names))
-     .assign(lambda_value=10.0 ** np.arange(-5, 6))
-     .set_index("lambda_value"))
+     .assign(lambda_value=10.0 ** alphas)
+     .set_index("lambda_value")
+     .unstack()
+     .reset_index()
+     .rename(columns={"level_0": "field",
+                      0: "standardized_coefficients"})
+     .loc[:, ["lambda_value", "field", "standardized_coefficients"]])
 
-import seaborn as sns
+# Viewing DataFrame
+coefficients
 
-coefficients.pivot()
-
-sns.lineplot(coefficients,y="index")
-
-
-# Medium
-
-# ridge_reg = Ridge(alpha=0)
-# ridge_reg.fit(X_train, y_train)
-# ridge_df = pd.DataFrame({'variable': house_price.feature_names, 'estimate': ridge_reg.coef_})
-# ridge_train_pred = []
-# ridge_test_pred = []
-
-# for alpha in np.arange(0, 200, 1):
-#     # training
-#     ridge_reg = Ridge(alpha=alpha)
-#     ridge_reg.fit(X_train, y_train)
-#     var_name = 'estimate' + str(alpha)
-#     ridge_df[var_name] = ridge_reg.coef_
-#     # prediction
-#     ridge_train_pred.append(ridge_reg.predict(X_train))
-#     ridge_test_pred.append(ridge_reg.predict(X_test))
-#
-# fig, ax = plt.subplots(figsize=(10, 5))
-# ax.plot(ridge_df.RM, 'r', ridge_df.ZN, 'g', ridge_df.RAD, 'b', ridge_df.CRIM, 'c', ridge_df.TAX, 'y')
-# ax.axhline(y=0, color='black', linestyle='--')
-# ax.set_xlabel("Lambda")
-# ax.set_ylabel("Beta Estimate")
-# ax.set_title("Ridge Regression Trace", fontsize=16)
-# ax.legend(labels=['Room','Residential Zone','Highway Access','Crime Rate','Tax'])
-# ax.grid(True)
-
-# Someething like this would also work
-# SOF
-# alphas = [1, 10]
-# coefs = []
-# for a in alphas:
-#     ridge = Ridge(alpha=a, fit_intercept=False)
-#     ridge.fit(X, y)
-#     coefs.append(ridge.coef_)
-#
-# ax = plt.gca()
-# ax.plot(alphas, coefs)
-# ax.set_xscale('log')
-# ax.set_xlim(ax.get_xlim()[::-1])  # reverse axis
-# plt.xlabel('alpha')
-# plt.ylabel('weights')
-# plt.title('Ridge coefficients as a function of the regularization')
-# plt.axis('tight')
-# plt.show()
-
-# =====================================
-#
-# =====================================
+# Plotting standardized coefficients as function of lambda
+sns.lineplot(data=coefficients,
+             x="lambda_value",
+             y="standardized_coefficients",
+             hue="field")
 
 
 # =====================================
-#
+# GridSearchCV with Lasso
+# =====================================
+
+# Initializing Lasso and GridSearchCV estimators
+lasso = Lasso()
+grid_search_lasso = GridSearchCV(estimator=lasso, param_grid=param_grid)
+
+# Fitting grid search object
+grid_search_lasso.fit(X, y)
+
+# Results
+grid_search_lasso.best_params_     # best alpha=0.1
+grid_search_lasso.best_score_      # highest mean 5-fold cross-validated test score (corresponds where alpha=0.1)
+grid_search_lasso.score(X, y)      # training score of best model, refit on all folds
+
+# =====================================
+# Lasso with statsmodels' OLS.fit_regularized
 # =====================================
 
 
