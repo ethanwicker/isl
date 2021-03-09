@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.datasets import load_boston
-from sklearn.linear_model import Lasso, Ridge
+from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -189,7 +189,12 @@ grid_search_lasso.score(X, y)      # training score of best model, refit on all 
 # Lasso with statsmodels' OLS.fit_regularized
 # =====================================
 
+import statsmodels.api as sm
 
+# L1_wt = 1 --> lasso, L1_wt = 0 --> ridge
+sm_lasso = sm.OLS(endog=y, exog=sm.add_constant(X))
+result = sm_lasso.fit_regularized(method="elastic_net", alpha=0.1, L1_wt=1)
+result.params  # viewing standardized coefficients when alpha=0.1
 
 
 
