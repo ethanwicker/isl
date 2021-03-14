@@ -10,7 +10,7 @@
 # https://pypi.org/project/pca/
 # https://stackoverflow.com/questions/39216897/plot-pca-loadings-and-loading-in-biplot-in-sklearn-like-rs-autoplot
 
-
+# For an example of plotting a biplot via matplotlib exclusively...
 # Good example: https://jakevdp.github.io/PythonDataScienceHandbook/05.09-principal-component-analysis.html
 
 from sklearn.decomposition import PCA
@@ -28,17 +28,21 @@ import seaborn as sns
 
 from sklearn.datasets import load_iris
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
+# Loading Iris
 X, y = load_iris(return_X_y=True)
 
-# NOTE: I NEED TO SCALE MY DATA ****
+# Scaling features
+X = StandardScaler().fit_transform(X)
 
-
+# Initializing PCA estimator
+# n_components=None by default, so all components will be returned
 pca = PCA()
 
-# n_components=None by default, so all components returned
-pca.fit_transform(X)  # projected X values (I think)
-pca.components_       # principal components
+# Performing PCA
+pca.fit_transform(X)  # projected X values, aka principal component scores
+pca.components_  # each row represents a principal component, while each value is a loading
 pca.explained_variance_ratio_  # proportion of variance explained per component
 
 # Scree plot
@@ -61,45 +65,104 @@ pca.explained_variance_ratio_  # proportion of variance explained per component
       ylabel="Cumulative Proportion of Variance Explained",
       ylim=(-0.05, 1.05)))
 
-np.cumsum(pca.explained_variance_ratio_)
+
+
+# Creating biplot and 3D biplot with pca package
+import pca
+
+from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+
+# Loading iris as NumPy arrays
+X, y = load_iris(return_X_y=True)
+
+# Scaling features
+X = StandardScaler().fit_transform(X)
+
+# Creating DataFrame of X values
+X_df = pd.DataFrame(X, columns=load_iris().feature_names)
+
+# Creating DataFrame of y values
+target_names = pd.DataFrame(data=dict(target=np.unique(y),
+                                      target_names=load_iris().target_names))
+y_df = pd.merge(pd.DataFrame(data=dict(target=y)), target_names)
+
+# Initializing pca.pca estimator
+model = pca.pca()
+
+# Performing PCA
+results = model.fit_transform(X_df)
+
+# Plotting biplot
+fig, ax = model.biplot(y=y_df["target_names"])
+
 
 
 
 # Exploring Python Data Science Handbook Code Snippet
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 
+# Setting plot theme
+sns.set_theme()
+
+
+# Defining function to draw principal component vectors
 def draw_vector(v0, v1, ax=None):
     ax = ax or plt.gca()
-    arrowprops=dict(arrowstyle='->',
-                    linewidth=2,
-                    shrinkA=0, shrinkB=0)
-    ax.annotate('', v1, v0, arrowprops=arrowprops)
+    arrowprops = dict(arrowstyle="->",
+                      linewidth=2,
+                      shrinkA=0,
+                      shrinkB=0,
+                      color="black")
+    ax.annotate("", v1, v0, arrowprops=arrowprops)
 
-rng = np.random.RandomState(1)
+
+# Generating data
+rng = np.random.RandomState(123)
 X = np.dot(rng.rand(2, 2), rng.randn(2, 200)).T
-pca = PCA(n_components=2, whiten=True)
+pca = PCA(n_components=2)
 pca.fit(X)
 
 fig, ax = plt.subplots(1, 2, figsize=(16, 6))
 fig.subplots_adjust(left=0.0625, right=0.95, wspace=0.1)
 
-# plot data
-ax[0].scatter(X[:, 0], X[:, 1], alpha=0.2)
+# Plotting data and principal component vectors
+ax[0].scatter(X[:, 0], X[:, 1], alpha=0.3)
 for length, vector in zip(pca.explained_variance_, pca.components_):
-    v = vector * 3 * np.sqrt(length)
-    draw_vector(pca.mean_, pca.mean_ + v, ax=ax[0])
-ax[0].axis('equal');
-ax[0].set(xlabel='x', ylabel='y', title='input')
+    draw_vector(pca.mean_, pca.mean_ + vector, ax=ax[0])
+ax[0].axis("equal")
+ax[0].set(xlabel="x",
+          ylabel="y",
+          title="Random 2D Data Points")
 
-# plot principal components
+# Plotting point with max x value as red
+max_x_index = pd.DataFrame(X)[0].idxmax()
+ax[0].plot(X[max_x_index, 0], X[max_x_index, 1], "ro")
+
+# Plotting project points onto first and second principal components
 X_pca = pca.transform(X)
 ax[1].scatter(X_pca[:, 0], X_pca[:, 1], alpha=0.2)
 draw_vector([0, 0], [0, 3], ax=ax[1])
 draw_vector([0, 0], [3, 0], ax=ax[1])
-ax[1].axis('equal')
-ax[1].set(xlabel='component 1', ylabel='component 2',
-          title='principal components',
+ax[1].axis("equal")
+ax[1].set(xlabel="First Principal Component",
+          ylabel="Second Principal Component",
+          title="Principal Components",
           xlim=(-5, 5), ylim=(-3, 3.1))
 
-fig.savefig('figures/05.09-PCA-rotation.png')
+# Plotting point with max x value as red (same point as above)
+ax[1].plot(X_pca[max_x_index, 0], X_pca[max_x_index, 1], "ro")
 
 
+# Exploring statsmodels
+
+
+from statsmodels.multivariate.pca import PCA
+
+# Initializing, standarize=False because X already standarized
+results = PCA(X, standardize=False)
+
+results.loadings  # principal components represented vertically (vs. horizontally in scikit-learn)
