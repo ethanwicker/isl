@@ -29,9 +29,11 @@ The structure of this post was influenced by the sixth chapter of *An Introducti
 
 ### Principal Components Regression
 
-Principal components regression (PCR) involves first performing princpal components analysis on our data set to obtain the first $M$ principal components $Z_1, \ldots, Z_M$.  These components are then used as the predictors in a linear regression model fit using least squares.
+Principal components regression (PCR) involves first performing principal components analysis on our data set to obtain the first $M$ principal components $Z_1, \ldots, Z_M$.  These components are then used as the predictors in a linear regression model fit using least squares.
 
 The underlying idea behind PCR is that often a small number of principal components can sufficiently explain most of the variability in the data, as well as the predictor's relationship with the response.  Thus, we assume that *the directions in which $X_1, \ldots, X_p$ show the most variation are the directions that are associated with $Y$*.  This assumption is often not guaranteed, but does turn out to be a reasonable enough approximation and provide good results.  If the assumption does hold, then fitting a least squares model to $Z_1, \ldots, Z_M$ will lead to better results that fitting a least squares model to $X_1, \ldots, X_p$, and we will also be able to mitigate overfitting.  As with PCA, it is recommended to standardize each predictor before performing PCR.
+
+COMMENT/Question: Performing PCA on the projected values correct? the "components" are the actual projected values, in contrast to the principal component direction 
 
 ---->>>>RECONSTRUCT FIGURE 6.18 maybe?  Test MSE vs. Number of Components for PCR on a dataset with lots of predictor variables.  Calculate Test MSE via 10-fold cross validation.     <<<<----
 
