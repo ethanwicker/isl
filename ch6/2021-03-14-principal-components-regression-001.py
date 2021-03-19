@@ -1,6 +1,7 @@
 # Good resource: http://www.science.smith.edu/~jcrouser/SDS293/labs/lab11-py.html
 
 import pandas as pd
+import seaborn as sns
 
 from sklearn.datasets import load_diabetes
 from sklearn.decomposition import PCA
@@ -21,33 +22,41 @@ X = standard_scaler.fit_transform(X)
 pca = PCA()
 
 # Performing PCA
-X_scores = pca.fit_transform(X)
+pc_scores = pca.fit_transform(X)
 
-pca.components_
-
+# Initializing estimator
 lin_reg = LinearRegression()
-
-lin_reg.fit(X=pca.fit_transform(X), y=y)
 
 # neg_mean_squared_error instead of just mean_squared_error because cross_val_score tries to maximize scores.
 # But we want a low MSE, or a high negative MSE
-cross_val_score(lin_reg, X_scores[:, 0:2], y, cv=10, scoring="neg_mean_squared_error")
 
+# Creating lists to hold results
 components_used = []
 mean_squared_errors = []
 
+# Performing 10-fold cross validation on sequential amount of principal components
 for i in range(1, 11):
 
+    # 10-fold cross-validation
     cv_scores = cross_val_score(estimator=lin_reg,
-                                X=X_scores[:, 0:i],
+                                X=pc_scores[:, 0:i],
                                 y=y,
                                 cv=10,
                                 scoring="neg_mean_squared_error")
 
+    # Calculating average of negative mean squared error, and turning positive
     cv_mean_squared_error = cv_scores.mean() * -1
 
+    # Appending results
     components_used.append(i)
     mean_squared_errors.append(cv_mean_squared_error)
 
-pd.DataFrame(data=dict(components_used=components_used,
-                       mean_squared_errors=mean_squared_errors))
+# Organizing cross-validation results into DataFrame
+mse_by_n_components = \
+    pd.DataFrame(data=dict(components_used=components_used,
+                           mean_squared_errors=mean_squared_errors))
+
+# Plotting
+sns.lineplot(x="components_used",
+             y="mean_squared_errors",
+             data=mse_by_n_components)
